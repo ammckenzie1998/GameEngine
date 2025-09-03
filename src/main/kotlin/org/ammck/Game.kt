@@ -1,6 +1,9 @@
 package org.ammck
 
+import org.ammck.engine.AxisAlignedBoundingBox
 import org.ammck.engine.Camera
+import org.ammck.game.Player
+import org.ammck.game.PlayerInput
 import org.ammck.render.Mesh
 import org.ammck.render.ShaderProgram
 import org.joml.Math.cos
@@ -48,21 +51,20 @@ object Game{
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
 
-    private const val MOVEMENT_SPEED = 20.0f
-    private const val TURN_SPEED = 2.5f
-
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var camera: Camera
 
     private lateinit var cubeMesh: Mesh
     private lateinit var groundMesh: Mesh
     private lateinit var originMesh: Mesh
+    private lateinit var player: Player
+
+    private lateinit var playerAABB: AxisAlignedBoundingBox
+    private lateinit var originCubeAABB: AxisAlignedBoundingBox
 
     private val projectionMatrix = Matrix4f()
     private val modelMatrix = Matrix4f()
 
-    private val cubePosition = Vector3f(0.0f, 0.0f, 0.0f)
-    private var cubeRotationY = 0.0f
     private var lastFrameTime = 0.0
     private var deltaTime = 0.0f
 
@@ -103,8 +105,12 @@ object Game{
         shaderProgram = ShaderProgram("shaders/default.vert", "shaders/default.frag")
         groundMesh = defineGround()
         cubeMesh = defineCube()
+        player = Player(cubeMesh)
         originMesh = defineCube()
-        camera = Camera(cubePosition)
+        camera = Camera(player.state.position)
+
+        playerAABB = AxisAlignedBoundingBox(player.state.position, Vector3f(1.0f, 1.0f, 1.0f))
+        originCubeAABB = AxisAlignedBoundingBox(Vector3f(0f,0f,0f), Vector3f(1f, 1f, 1f))
 
         setupMatrices()
         lastFrameTime = glfwGetTime()
@@ -120,8 +126,19 @@ object Game{
 
 
             handleInput()
-            camera.update(cubeRotationY)
-            val pos = cubePosition
+            playerAABB.center.set(player.state.position)
+            val pushVector = playerAABB.getCollisionResponse(originCubeAABB)
+            if(pushVector != null){
+                println("Collision detected!")
+                player.state.position.add(pushVector)
+
+                if(pushVector.x != 0f) player.state.velocity.x = 0f
+                if(pushVector.y != 0f) player.state.velocity.y = 0f
+                if(pushVector.z != 0f) player.state.velocity.z = 0f
+            }
+
+            camera.update(player.state.rotationY)
+            val pos = player.state.position
             println("Cube position: X=${pos.x} Y=${pos.y} Z=${pos.z}")
 
             glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
@@ -142,8 +159,8 @@ object Game{
             originMesh.draw()
 
             modelMatrix.identity()
-                .translate(cubePosition)
-                .rotateY(cubeRotationY)
+                .translate(player.state.position)
+                .rotateY(player.state.rotationY)
             shaderProgram.setUniform("model", modelMatrix)
             cubeMesh.draw()
 
@@ -169,25 +186,13 @@ object Game{
     }
 
     private fun handleInput(){
-        if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-            cubeRotationY += TURN_SPEED * deltaTime
-        }
-        if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-            cubeRotationY -= TURN_SPEED * deltaTime
-        }
-
-        val move = MOVEMENT_SPEED * deltaTime
-        val directionX = sin(cubeRotationY)
-        val directionZ = cos(cubeRotationY)
-
-        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-            cubePosition.x += directionX * move
-            cubePosition.z += directionZ * move
-        }
-        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-            cubePosition.x -= directionX * move
-            cubePosition.z -= directionZ * move
-        }
+        val playerInput = PlayerInput(
+            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS
+        )
+        player.update(deltaTime, playerInput)
     }
 
     private fun setupMatrices(){
