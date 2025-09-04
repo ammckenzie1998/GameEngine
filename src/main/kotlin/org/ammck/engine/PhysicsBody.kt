@@ -1,0 +1,14 @@
+package org.ammck.engine
+
+import org.ammck.engine.Transform
+import org.joml.Vector3f
+
+class PhysicsBody(
+    val transform: Transform,
+    val boundingBox: AxisAlignedBoundingBox,
+    val isStatic: Boolean = false,
+){
+
+    val velocity: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)
+    val inverseMass: Float = if (isStatic) 0.0f else 1.0f
+}

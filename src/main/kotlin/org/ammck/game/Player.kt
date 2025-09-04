@@ -1,59 +1,51 @@
 package org.ammck.game
 
 import org.ammck.Game
+import org.ammck.engine.GameObject
+import org.ammck.engine.PhysicsBody
 import org.ammck.render.Mesh
 import org.joml.Math.cos
 import org.joml.Math.sin
 import org.joml.Vector3f
 import kotlin.times
 
-class Player (val mesh: Mesh) {
+class Player (private val gameObject: GameObject) {
 
-    private val MOVEMENT_SPEED = 20.0f
+    private val ACCELERATION = 100.0f
+    private val DRAG = 0.99f
     private val TURN_SPEED = 2.5f
-    private val GRAVITY = -9.8f
-    private val GROUND_HEIGHT = 0f
 
-
-    val state = State(
-        Vector3f(0f,10f,0f),
-        0f,
-        Vector3f(0f,0f,0f)
-    )
 
     fun update(
         deltaTime: Float,
         playerInput: PlayerInput
     ){
-        state.velocity.y += GRAVITY * deltaTime
-        state.position.add(Vector3f(state.velocity).mul(deltaTime))
-        if(state.position.y < GROUND_HEIGHT){
-            state.position.y = GROUND_HEIGHT
-            state.velocity.y = 0f
-        }
-
+        val physicsBody = gameObject.physicsBody
+        //Apply turning
         if(playerInput.isTurnLeftPressed){
-            state.rotationY += TURN_SPEED * deltaTime
+            physicsBody.transform.rotationY += TURN_SPEED * deltaTime
         }
         if(playerInput.isTurnRightPressed){
-            state.rotationY -= TURN_SPEED * deltaTime
+            physicsBody.transform.rotationY -= TURN_SPEED * deltaTime
         }
-        state.velocity.x = 0f
-        state.velocity.z = 0f
 
+        //Apply acceleration
         if(playerInput.isMoveForwardPressed || playerInput.isMoveBackwardPressed){
-            val directionX = sin(state.rotationY)
-            val directionZ = cos(state.rotationY)
+            val directionX = sin(physicsBody.transform.rotationY)
+            val directionZ = cos(physicsBody.transform.rotationY)
 
             if (playerInput.isMoveForwardPressed){
-                state.velocity.x += directionX * MOVEMENT_SPEED
-                state.velocity.z += directionZ * MOVEMENT_SPEED
+                physicsBody.velocity.x += directionX * ACCELERATION * deltaTime
+                physicsBody.velocity.z += directionZ * ACCELERATION * deltaTime
             }
             if (playerInput.isMoveBackwardPressed){
-                state.velocity.x -= directionX * MOVEMENT_SPEED
-                state.velocity.z -= directionZ * MOVEMENT_SPEED
+                physicsBody.velocity.x -= directionX * ACCELERATION * deltaTime
+                physicsBody.velocity.z -= directionZ * ACCELERATION * deltaTime
             }
         }
+
+        if (physicsBody.velocity.x != 0.0f) physicsBody.velocity.x *= DRAG
+        if (physicsBody.velocity.z != 0.0f) physicsBody.velocity.z *= DRAG
 
     }
 

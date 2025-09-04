@@ -2,6 +2,10 @@ package org.ammck
 
 import org.ammck.engine.AxisAlignedBoundingBox
 import org.ammck.engine.Camera
+import org.ammck.engine.GameObject
+import org.ammck.engine.PhysicsBody
+import org.ammck.engine.PhysicsEngine
+import org.ammck.engine.Transform
 import org.ammck.game.Player
 import org.ammck.game.PlayerInput
 import org.ammck.render.Mesh
@@ -53,18 +57,13 @@ object Game{
 
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var camera: Camera
+    private lateinit var physicsEngine: PhysicsEngine
 
-    private lateinit var cubeMesh: Mesh
-    private lateinit var groundMesh: Mesh
-    private lateinit var originMesh: Mesh
     private lateinit var player: Player
-
-    private lateinit var playerAABB: AxisAlignedBoundingBox
-    private lateinit var originCubeAABB: AxisAlignedBoundingBox
+    private val gameObjects = mutableListOf<GameObject>()
 
     private val projectionMatrix = Matrix4f()
     private val modelMatrix = Matrix4f()
-
     private var lastFrameTime = 0.0
     private var deltaTime = 0.0f
 
@@ -76,6 +75,73 @@ object Game{
     }
 
     private fun init(){
+        initWindow()
+        shaderProgram = ShaderProgram("shaders/default.vert", "shaders/default.frag")
+
+        physicsEngine = PhysicsEngine()
+
+        val playerTransform = Transform(position = Vector3f(0f, 10f, 0f))
+        val playerBoundingBox = AxisAlignedBoundingBox(playerTransform.position, Vector3f(2.0f, 1.0f, 1.0f))
+        val playerBody = PhysicsBody(playerTransform, playerBoundingBox)
+        val playerMesh = defineCube()
+        val playerGameObject = GameObject(playerTransform, playerMesh, playerBody)
+        player = Player(playerGameObject)
+        gameObjects.add(playerGameObject)
+
+        val groundTransform = Transform()
+        val groundBoundingBox = AxisAlignedBoundingBox(groundTransform.position, Vector3f(100f, 0.01f, 100f))
+        val groundBody = PhysicsBody(groundTransform, groundBoundingBox, true)
+        val groundMesh = defineGround()
+        val groundGameObject = GameObject(groundTransform, groundMesh, groundBody)
+        gameObjects.add(groundGameObject)
+
+        val cubeTransform = Transform()
+        val cubeBoundingBox = AxisAlignedBoundingBox(cubeTransform.position, Vector3f(1.0f, 1.0f, 1.0f))
+        val cubeBody = PhysicsBody(groundTransform, cubeBoundingBox, true)
+        val cubeMesh = defineCube()
+        val cubeGameObject = GameObject(cubeTransform, cubeMesh, cubeBody)
+        gameObjects.add(cubeGameObject)
+
+        physicsEngine.addBodies(playerBody, groundBody, cubeBody)
+
+        camera = Camera(playerBody.transform)
+        setupMatrices()
+        lastFrameTime = glfwGetTime()
+    }
+
+    private fun loop(){
+        glClearColor(0.7f, 0.7f, 1.0f, 0.0f)
+
+        while(!glfwWindowShouldClose(window)){
+            val currentFrameTime = glfwGetTime()
+            deltaTime = (currentFrameTime - lastFrameTime).toFloat()
+            lastFrameTime = currentFrameTime
+
+            handleInput()
+
+            physicsEngine.update(deltaTime)
+            camera.update()
+
+            renderScene()
+
+            glfwPollEvents()
+            glfwSwapBuffers(window)
+
+            if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
+                glfwSetWindowShouldClose(window, true)
+            }
+        }
+    }
+
+    private fun destroy(){
+        shaderProgram.cleanup()
+        gameObjects.forEach { it.mesh.cleanup() }
+
+        glfwDestroyWindow(window)
+        glfwTerminate()
+    }
+
+    private fun initWindow(){
         if(!glfwInit()){
             throw IllegalStateException("Unable to initialize GLFW")
         }
@@ -101,88 +167,26 @@ object Game{
 
         createCapabilities()
         glEnable(GL_DEPTH_TEST)
-
-        shaderProgram = ShaderProgram("shaders/default.vert", "shaders/default.frag")
-        groundMesh = defineGround()
-        cubeMesh = defineCube()
-        player = Player(cubeMesh)
-        originMesh = defineCube()
-        camera = Camera(player.state.position)
-
-        playerAABB = AxisAlignedBoundingBox(player.state.position, Vector3f(1.0f, 1.0f, 1.0f))
-        originCubeAABB = AxisAlignedBoundingBox(Vector3f(0f,0f,0f), Vector3f(1f, 1f, 1f))
-
-        setupMatrices()
-        lastFrameTime = glfwGetTime()
     }
 
-    private fun loop(){
-        glClearColor(0.7f, 0.7f, 1.0f, 0.0f)
+    private fun renderScene(){
+        glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
+        shaderProgram.bind()
 
-        while(!glfwWindowShouldClose(window)){
-            val currentFrameTime = glfwGetTime()
-            deltaTime = (currentFrameTime - lastFrameTime).toFloat()
-            lastFrameTime = currentFrameTime
+        val viewMatrix = camera.getViewMatrix()
 
+        shaderProgram.setUniform("projection", projectionMatrix)
+        shaderProgram.setUniform("view", viewMatrix)
 
-            handleInput()
-            playerAABB.center.set(player.state.position)
-            val pushVector = playerAABB.getCollisionResponse(originCubeAABB)
-            if(pushVector != null){
-                println("Collision detected!")
-                player.state.position.add(pushVector)
-
-                if(pushVector.x != 0f) player.state.velocity.x = 0f
-                if(pushVector.y != 0f) player.state.velocity.y = 0f
-                if(pushVector.z != 0f) player.state.velocity.z = 0f
-            }
-
-            camera.update(player.state.rotationY)
-            val pos = player.state.position
-            println("Cube position: X=${pos.x} Y=${pos.y} Z=${pos.z}")
-
-            glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
-            shaderProgram.bind()
-
-
-            val viewMatrix = camera.getViewMatrix()
-
-            shaderProgram.setUniform("projection", projectionMatrix)
-            shaderProgram.setUniform("view", viewMatrix)
-
+        for(gameObject in gameObjects){
             modelMatrix.identity()
+                .translate(gameObject.transform.position)
+                .rotateY(gameObject.transform.rotationY)
             shaderProgram.setUniform("model", modelMatrix)
-            groundMesh.draw()
-
-            modelMatrix.identity()
-            shaderProgram.setUniform("model", modelMatrix)
-            originMesh.draw()
-
-            modelMatrix.identity()
-                .translate(player.state.position)
-                .rotateY(player.state.rotationY)
-            shaderProgram.setUniform("model", modelMatrix)
-            cubeMesh.draw()
-
-            shaderProgram.unbind()
-
-            glfwPollEvents()
-            glfwSwapBuffers(window)
-
-            if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
-                glfwSetWindowShouldClose(window, true)
-            }
+            gameObject.mesh.draw()
         }
-    }
 
-    private fun destroy(){
-        shaderProgram.cleanup()
-        cubeMesh.cleanup()
-        groundMesh.cleanup()
-        originMesh.cleanup()
-
-        glfwDestroyWindow(window)
-        glfwTerminate()
+        shaderProgram.unbind()
     }
 
     private fun handleInput(){
