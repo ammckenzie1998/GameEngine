@@ -24,12 +24,18 @@ class Mesh (vertices: FloatArray) {
     companion object{
         private const val POSITION_ATTRIBUTE_LOCATION = 0
         private const val COLOR_ATTRIBUTE_LOCATION = 1
+        private const val TEX_COORD_ATTRIBUTE_LOCATION = 2
+
         private const val POSITION_COMPONENTS = 3 // x, y, z
         private const val COLOR_COMPONENTS = 3 // r, g, b
+        private const val TEX_COORD_COMPONENTS = 2 // u, v
 
-        private const val VERTEX_FLOAT_COUNT = POSITION_COMPONENTS + COLOR_COMPONENTS
+        private const val VERTEX_FLOAT_COUNT = POSITION_COMPONENTS + COLOR_COMPONENTS + TEX_COORD_COMPONENTS
         private const val STRIDE = VERTEX_FLOAT_COUNT * Float.SIZE_BYTES
+
         private const val COLOR_OFFSET = (POSITION_COMPONENTS * Float.SIZE_BYTES).toLong()
+        private const val TEX_COORD_OFFSET = ((POSITION_COMPONENTS + COLOR_COMPONENTS) * Float.SIZE_BYTES).toLong()
+
     }
 
     init{
@@ -61,6 +67,16 @@ class Mesh (vertices: FloatArray) {
             COLOR_OFFSET
         )
         glEnableVertexAttribArray(COLOR_ATTRIBUTE_LOCATION)
+
+        glVertexAttribPointer(
+            TEX_COORD_ATTRIBUTE_LOCATION,
+            TEX_COORD_COMPONENTS,
+            GL_FLOAT,
+            false,
+            STRIDE,
+            TEX_COORD_OFFSET
+        )
+        glEnableVertexAttribArray(TEX_COORD_ATTRIBUTE_LOCATION)
     }
 
     fun draw(){

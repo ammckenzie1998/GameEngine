@@ -15,6 +15,7 @@ class PhysicsEngine {
     }
 
     fun update(deltaTime: Float) {
+
         //1. Gravity
         for (obj in physicsObjects) {
             val physicsBody = obj.physicsBody ?: continue

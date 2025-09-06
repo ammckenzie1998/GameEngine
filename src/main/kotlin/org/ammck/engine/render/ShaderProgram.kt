@@ -21,6 +21,7 @@ import org.lwjgl.opengl.GL20.glGetShaderi
 import org.lwjgl.opengl.GL20.glGetUniformLocation
 import org.lwjgl.opengl.GL20.glLinkProgram
 import org.lwjgl.opengl.GL20.glShaderSource
+import org.lwjgl.opengl.GL20.glUniform1i
 import org.lwjgl.opengl.GL20.glUniformMatrix4fv
 import org.lwjgl.opengl.GL20.glUseProgram
 import java.io.File
@@ -34,8 +35,8 @@ class ShaderProgram (vertexPath: String, fragmentPath: String) {
     private val matrixBuffer: FloatBuffer = BufferUtils.createFloatBuffer(16)
 
     init{
-        val vertexCode = FileUtil.readResourceFile(vertexPath)
-        val fragmentCode = FileUtil.readResourceFile(fragmentPath)
+        val vertexCode = FileUtil.readResourceAsString(vertexPath)
+        val fragmentCode = FileUtil.readResourceAsString(fragmentPath)
 
         vertexShaderId = compileShader(vertexCode, GL_VERTEX_SHADER)
         fragmentShaderId = compileShader(fragmentCode, GL_FRAGMENT_SHADER)
@@ -76,6 +77,13 @@ class ShaderProgram (vertexPath: String, fragmentPath: String) {
         if(location != -1){
             value.get(matrixBuffer)
             glUniformMatrix4fv(location, false, matrixBuffer)
+        }
+    }
+
+    fun setUniform(uniformName: String, value: Int){
+        val location = glGetUniformLocation(programId, uniformName)
+        if(location != -1){
+            glUniform1i(location, value)
         }
     }
 

@@ -11,6 +11,7 @@ import org.ammck.game.Player
 import org.ammck.game.PlayerInput
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
+import org.ammck.engine.render.Texture
 import org.ammck.game.models.CarFactory
 import org.joml.Matrix4f
 import org.joml.Vector3f
@@ -46,6 +47,8 @@ import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
 import org.lwjgl.opengl.GL11.glClear
 import org.lwjgl.opengl.GL11.glClearColor
 import org.lwjgl.opengl.GL11.glEnable
+import org.lwjgl.opengl.GL13.GL_TEXTURE0
+import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.system.MemoryUtil
 
 object Game{
@@ -62,6 +65,9 @@ object Game{
     private lateinit var player: Player
     private val gameObjects = mutableListOf<GameObject>()
     private lateinit var wheelMesh: Mesh
+
+    private lateinit var groundTexture: Texture
+    private lateinit var defaultTexture: Texture
 
     private val projectionMatrix = Matrix4f()
     private val modelMatrix = Matrix4f()
@@ -83,6 +89,9 @@ object Game{
 
         val chassisMesh = ModelLoader.load("models/car.ammodel")
         wheelMesh = ModelLoader.load("models/wheel.ammodel")
+
+        groundTexture = Texture("textures/grass.png")
+        defaultTexture = Texture("textures/default.png")
 
         val playerTransform = Transform(position = Vector3f(0f, 10f, 0f))
         val playerGameObject = CarFactory.createPlayerCar(playerTransform, chassisMesh, wheelMesh)
@@ -122,6 +131,11 @@ object Game{
             handleInput()
 
             physicsEngine.update(deltaTime)
+
+            for(gameObject in gameObjects) {
+                gameObject.update()
+            }
+
             camera.update(deltaTime)
 
             renderScene()
@@ -138,6 +152,7 @@ object Game{
     private fun destroy(){
         shaderProgram.cleanup()
         gameObjects.forEach { it.mesh.cleanup() }
+        groundTexture.cleanup()
 
         glfwDestroyWindow(window)
         glfwTerminate()
@@ -179,8 +194,16 @@ object Game{
 
         shaderProgram.setUniform("projection", projectionMatrix)
         shaderProgram.setUniform("view", viewMatrix)
+        shaderProgram.setUniform("textureSampler", 0)
 
         for(gameObject in gameObjects){
+            if(gameObject.mesh === (gameObjects.find { it.physicsBody?.isStatic == true && it.transform.position.y == 0.0f}?.mesh)){
+                glActiveTexture(GL_TEXTURE0)
+                groundTexture.bind()
+            } else{
+                glActiveTexture(GL_TEXTURE0)
+                defaultTexture.bind()
+            }
             drawGameObject(gameObject)
         }
 
@@ -188,7 +211,6 @@ object Game{
     }
 
     private fun drawGameObject(gameObject: GameObject){
-        gameObject.update()
         shaderProgram.setUniform("model", gameObject.globalMatrix)
         gameObject.mesh.draw()
         for(child in gameObject.children){
@@ -213,14 +235,14 @@ object Game{
 
     private fun defineGround(): Mesh{
         val groundVertices = floatArrayOf(
-            // Positions             // Colors (a dark green)
-            -50.0f, -0.75f, -50.0f,  0.2f, 0.4f, 0.2f,
-            50.0f, -0.75f, -50.0f,  0.2f, 0.4f, 0.2f,
-            50.0f, -0.75f,  50.0f,  0.2f, 0.4f, 0.2f,
+            // Positions          // Colors (tint)     // Texture Coords (UVs)
+            -50.0f, -0.75f, -50.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,
+            50.0f, -0.75f, -50.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,
+            50.0f, -0.75f,  50.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
 
-            50.0f, -0.75f,  50.0f,  0.2f, 0.4f, 0.2f,
-            -50.0f, -0.75f,  50.0f,  0.2f, 0.4f, 0.2f,
-            -50.0f, -0.75f, -50.0f,  0.2f, 0.4f, 0.2f
+            50.0f, -0.75f,  50.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
+            -50.0f, -0.75f,  50.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+            -50.0f, -0.75f, -50.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
         )
         return Mesh(groundVertices)
     }
