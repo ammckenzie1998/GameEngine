@@ -1,13 +1,8 @@
 package org.ammck.game
 
-import org.ammck.Game
-import org.ammck.engine.GameObject
-import org.ammck.engine.PhysicsBody
-import org.ammck.render.Mesh
+import org.ammck.engine.objects.GameObject
 import org.joml.Math.cos
 import org.joml.Math.sin
-import org.joml.Vector3f
-import kotlin.times
 
 class Player (private val gameObject: GameObject) {
 
@@ -20,19 +15,19 @@ class Player (private val gameObject: GameObject) {
         deltaTime: Float,
         playerInput: PlayerInput
     ){
-        val physicsBody = gameObject.physicsBody
+        val physicsBody = gameObject.physicsBody!!
         //Apply turning
         if(playerInput.isTurnLeftPressed){
-            physicsBody.transform.rotationY += TURN_SPEED * deltaTime
+            gameObject.transform.rotationY += TURN_SPEED * deltaTime
         }
         if(playerInput.isTurnRightPressed){
-            physicsBody.transform.rotationY -= TURN_SPEED * deltaTime
+            gameObject.transform.rotationY -= TURN_SPEED * deltaTime
         }
 
         //Apply acceleration
         if(playerInput.isMoveForwardPressed || playerInput.isMoveBackwardPressed){
-            val directionX = sin(physicsBody.transform.rotationY)
-            val directionZ = cos(physicsBody.transform.rotationY)
+            val directionX = sin(gameObject.transform.rotationY)
+            val directionZ = cos(gameObject.transform.rotationY)
 
             if (playerInput.isMoveForwardPressed){
                 physicsBody.velocity.x += directionX * ACCELERATION * deltaTime

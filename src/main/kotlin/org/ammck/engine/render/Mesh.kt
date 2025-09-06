@@ -1,4 +1,4 @@
-package org.ammck.render
+package org.ammck.engine.render
 
 import org.lwjgl.opengl.GL11.GL_FLOAT
 import org.lwjgl.opengl.GL11.GL_TRIANGLES

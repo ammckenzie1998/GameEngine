@@ -1,6 +1,6 @@
-package org.ammck.engine
+package org.ammck.engine.physics
 
-import org.joml.Math.abs
+import org.joml.Math
 import org.joml.Vector3f
 
 class AxisAlignedBoundingBox(var center: Vector3f, val size: Vector3f) {
@@ -11,9 +11,9 @@ class AxisAlignedBoundingBox(var center: Vector3f, val size: Vector3f) {
         val distance = Vector3f(other.center).sub(this.center)
         val combinedHalfSizes = Vector3f(this.halfSize).add(other.halfSize)
 
-        val overlapX = combinedHalfSizes.x - abs(distance.x)
-        val overlapY = combinedHalfSizes.y - abs(distance.y)
-        val overlapZ = combinedHalfSizes.z - abs(distance.z)
+        val overlapX = combinedHalfSizes.x - Math.abs(distance.x)
+        val overlapY = combinedHalfSizes.y - Math.abs(distance.y)
+        val overlapZ = combinedHalfSizes.z - Math.abs(distance.z)
 
         if (overlapX >0 && overlapY > 0 && overlapZ > 0){
             return when{

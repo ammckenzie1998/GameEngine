@@ -7,27 +7,29 @@ import org.joml.Vector3f
 
 class Camera (
     private val targetTransform: Transform,
-    initialDistance: Float = 8.0f,
-    initialHeight: Float = 1.5f) {
+    var distance: Float = 8.0f,
+    var height: Float = 1.5f,
+    var smoothFactor: Float = 5.0f) {
 
-    var distanceFromTarget: Float = initialDistance
-    var heightAboveTarget: Float = initialHeight
     val position = Vector3f(0.0f, 0.0f, 0.0f)
 
     private val viewMatrix = Matrix4f()
     private val upDirection = Vector3f(0.0f, 1.0f, 0.0f)
+    private val desiredPosition = Vector3f()
 
-    fun update(){
+    fun update(deltaTime: Float){
 
         val targetPosition = targetTransform.position
         val targetRotationY = targetTransform.rotationY
 
-        val horizontalDistance = distanceFromTarget * cos(targetRotationY)
-        val verticalDistance = distanceFromTarget * sin(targetRotationY)
+        val horizontalDistance = distance * cos(targetRotationY)
+        val verticalDistance = distance * sin(targetRotationY)
 
-        position.x = targetPosition.x - verticalDistance
-        position.y = targetPosition.y + heightAboveTarget
-        position.z = targetPosition.z - horizontalDistance
+        desiredPosition.x = targetPosition.x - verticalDistance
+        desiredPosition.y = targetPosition.y + height
+        desiredPosition.z = targetPosition.z - horizontalDistance
+
+        position.lerp(desiredPosition, smoothFactor * deltaTime)
     }
 
     fun getViewMatrix(): Matrix4f{

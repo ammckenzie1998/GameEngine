@@ -18,6 +18,7 @@
 
         <lwjgl.version>3.3.1</lwjgl.version>
         <joml.version>1.10.5</joml.version>
+        <kotlinx.version>1.6.3</kotlinx.version>
     </properties>
 
     <repositories>
@@ -53,6 +54,9 @@
                 </executions>
                 <configuration>
                     <jvmTarget>${kotlin.compiler.jvmTarget}</jvmTarget>
+                    <compilerPlugins>
+                        <plugin>kotlinx-serialization</plugin>
+                    </compilerPlugins>
                 </configuration>
             </plugin>
             <plugin>
@@ -123,6 +127,11 @@
             <groupId>org.joml</groupId>
             <artifactId>joml</artifactId>
             <version>${joml.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-serialization-json</artifactId>
+            <version>${kotlinx.version}</version>
         </dependency>
     </dependencies>
     <profiles>

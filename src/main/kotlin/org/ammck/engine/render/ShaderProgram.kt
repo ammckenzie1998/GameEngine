@@ -1,5 +1,6 @@
-package org.ammck.render
+package org.ammck.engine.render
 
+import org.ammck.util.FileUtil
 import org.joml.Matrix4f
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL20.GL_COMPILE_STATUS
@@ -33,8 +34,8 @@ class ShaderProgram (vertexPath: String, fragmentPath: String) {
     private val matrixBuffer: FloatBuffer = BufferUtils.createFloatBuffer(16)
 
     init{
-        val vertexCode = readShaderFile(vertexPath)
-        val fragmentCode = readShaderFile(fragmentPath)
+        val vertexCode = FileUtil.readResourceFile(vertexPath)
+        val fragmentCode = FileUtil.readResourceFile(fragmentPath)
 
         vertexShaderId = compileShader(vertexCode, GL_VERTEX_SHADER)
         fragmentShaderId = compileShader(fragmentCode, GL_FRAGMENT_SHADER)
@@ -76,12 +77,6 @@ class ShaderProgram (vertexPath: String, fragmentPath: String) {
             value.get(matrixBuffer)
             glUniformMatrix4fv(location, false, matrixBuffer)
         }
-    }
-
-    private fun readShaderFile(path: String): String{
-        val resource = this::class.java.classLoader.getResource(path)
-            ?: throw RuntimeException("Can't find shader file: $path")
-        return File(resource.toURI()).readText()
     }
 
     private fun compileShader(shaderCode: String, shaderType: Int): Int{

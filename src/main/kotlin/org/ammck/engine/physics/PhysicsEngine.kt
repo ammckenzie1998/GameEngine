@@ -1,43 +1,49 @@
-package org.ammck.engine
+package org.ammck.engine.physics
 
+import org.ammck.engine.objects.GameObject
 import org.joml.Vector3f
 
 class PhysicsEngine {
 
     private val GRAVITY = -9.8f
-    private val bodies = mutableListOf<PhysicsBody>()
+
+    private val physicsObjects = mutableListOf<GameObject>()
     private val collisions = mutableListOf<Collision>()
 
-    fun addBodies(vararg newBodies: PhysicsBody) {
-        bodies.addAll(newBodies)
+    fun addObject(vararg newObjects: GameObject) {
+        physicsObjects.addAll(newObjects)
     }
 
     fun update(deltaTime: Float) {
         //1. Gravity
-        for (body in bodies) {
-            if (!body.isStatic) {
-                body.velocity.y += GRAVITY * deltaTime
-                body.transform.position.add(Vector3f(body.velocity).mul(deltaTime))
+        for (obj in physicsObjects) {
+            val physicsBody = obj.physicsBody ?: continue
+            if (!physicsBody.isStatic) {
+                physicsBody.velocity.y += GRAVITY * deltaTime
+                obj.transform.position.add(Vector3f(physicsBody.velocity).mul(deltaTime))
             }
         }
 
         //2. Collisions
         collisions.clear()
-        for (i in bodies.indices) {
-            for (j in i + 1 until bodies.size) {
-                val bodyA = bodies[i]
-                val bodyB = bodies[j]
+        for (i in physicsObjects.indices) {
+            for (j in i + 1 until physicsObjects.size) {
+                val objA = physicsObjects[i]
+                val objB = physicsObjects[j]
+
+                val bodyA = objA.physicsBody ?: continue
+                val bodyB = objB.physicsBody ?: continue
 
                 if (bodyA.isStatic && bodyB.isStatic) continue
 
-                bodyA.boundingBox.center.set(bodyA.transform.position)
-                bodyB.boundingBox.center.set(bodyB.transform.position)
+                bodyA.boundingBox.center.set(objA.transform.position)
+                bodyB.boundingBox.center.set(objB.transform.position)
 
                 val mtv = bodyA.boundingBox.getCollisionResponse(bodyB.boundingBox)
                 if (mtv != null) {
                     val penetration = mtv.length()
                     val normal = Vector3f(mtv).normalize()
-                    collisions.add(Collision(bodyA, bodyB, normal, penetration))
+                    collisions.add(Collision(objA, objB, normal, penetration))
                 }
             }
         }
@@ -49,8 +55,8 @@ class PhysicsEngine {
     }
 
     private fun resolveCollision(collision: Collision) {
-        val bodyA = collision.firstBody
-        val bodyB = collision.secondBody
+        val bodyA = collision.firstObject.physicsBody!!
+        val bodyB = collision.secondObject.physicsBody!!
         val normal = collision.normal
 
         // --- 1. Calculate Relative Velocity ---
@@ -73,10 +79,10 @@ class PhysicsEngine {
 
         val correction = Vector3f(normal).mul(collision.penetration / totalInverseMass)
         if (!bodyA.isStatic) {
-            bodyA.transform.position.sub(Vector3f(correction).mul(bodyA.inverseMass))
+            collision.firstObject.transform.position.sub(Vector3f(correction).mul(bodyA.inverseMass))
         }
         if (!bodyB.isStatic) {
-            bodyB.transform.position.add(Vector3f(correction).mul(bodyB.inverseMass))
+            collision.secondObject.transform.position.add(Vector3f(correction).mul(bodyB.inverseMass))
         }
     }
 }

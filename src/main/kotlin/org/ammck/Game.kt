@@ -1,17 +1,17 @@
 package org.ammck
 
-import org.ammck.engine.AxisAlignedBoundingBox
+import org.ammck.engine.physics.AxisAlignedBoundingBox
 import org.ammck.engine.Camera
-import org.ammck.engine.GameObject
-import org.ammck.engine.PhysicsBody
-import org.ammck.engine.PhysicsEngine
+import org.ammck.engine.objects.GameObject
+import org.ammck.engine.physics.PhysicsBody
+import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
+import org.ammck.engine.objects.ModelLoader
 import org.ammck.game.Player
 import org.ammck.game.PlayerInput
-import org.ammck.render.Mesh
-import org.ammck.render.ShaderProgram
-import org.joml.Math.cos
-import org.joml.Math.sin
+import org.ammck.engine.render.Mesh
+import org.ammck.engine.render.ShaderProgram
+import org.ammck.game.models.CarFactory
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW.GLFW_FALSE
@@ -61,6 +61,7 @@ object Game{
 
     private lateinit var player: Player
     private val gameObjects = mutableListOf<GameObject>()
+    private lateinit var wheelMesh: Mesh
 
     private val projectionMatrix = Matrix4f()
     private val modelMatrix = Matrix4f()
@@ -80,31 +81,32 @@ object Game{
 
         physicsEngine = PhysicsEngine()
 
+        val chassisMesh = ModelLoader.load("models/car.ammodel")
+        wheelMesh = ModelLoader.load("models/wheel.ammodel")
+
         val playerTransform = Transform(position = Vector3f(0f, 10f, 0f))
-        val playerBoundingBox = AxisAlignedBoundingBox(playerTransform.position, Vector3f(2.0f, 1.0f, 1.0f))
-        val playerBody = PhysicsBody(playerTransform, playerBoundingBox)
-        val playerMesh = defineCube()
-        val playerGameObject = GameObject(playerTransform, playerMesh, playerBody)
+        val playerGameObject = CarFactory.createPlayerCar(playerTransform, chassisMesh, wheelMesh)
+
         player = Player(playerGameObject)
         gameObjects.add(playerGameObject)
 
         val groundTransform = Transform()
         val groundBoundingBox = AxisAlignedBoundingBox(groundTransform.position, Vector3f(100f, 0.01f, 100f))
-        val groundBody = PhysicsBody(groundTransform, groundBoundingBox, true)
+        val groundBody = PhysicsBody(groundBoundingBox, true)
         val groundMesh = defineGround()
         val groundGameObject = GameObject(groundTransform, groundMesh, groundBody)
         gameObjects.add(groundGameObject)
 
         val cubeTransform = Transform()
         val cubeBoundingBox = AxisAlignedBoundingBox(cubeTransform.position, Vector3f(1.0f, 1.0f, 1.0f))
-        val cubeBody = PhysicsBody(groundTransform, cubeBoundingBox, true)
-        val cubeMesh = defineCube()
+        val cubeBody = PhysicsBody(cubeBoundingBox, true)
+        val cubeMesh = ModelLoader.load("models/cube.ammodel")
         val cubeGameObject = GameObject(cubeTransform, cubeMesh, cubeBody)
         gameObjects.add(cubeGameObject)
 
-        physicsEngine.addBodies(playerBody, groundBody, cubeBody)
+        physicsEngine.addObject(playerGameObject, groundGameObject, cubeGameObject)
 
-        camera = Camera(playerBody.transform)
+        camera = Camera(playerGameObject.transform, distance = 12.0f)
         setupMatrices()
         lastFrameTime = glfwGetTime()
     }
@@ -120,7 +122,7 @@ object Game{
             handleInput()
 
             physicsEngine.update(deltaTime)
-            camera.update()
+            camera.update(deltaTime)
 
             renderScene()
 
@@ -179,14 +181,19 @@ object Game{
         shaderProgram.setUniform("view", viewMatrix)
 
         for(gameObject in gameObjects){
-            modelMatrix.identity()
-                .translate(gameObject.transform.position)
-                .rotateY(gameObject.transform.rotationY)
-            shaderProgram.setUniform("model", modelMatrix)
-            gameObject.mesh.draw()
+            drawGameObject(gameObject)
         }
 
         shaderProgram.unbind()
+    }
+
+    private fun drawGameObject(gameObject: GameObject){
+        gameObject.update()
+        shaderProgram.setUniform("model", gameObject.globalMatrix)
+        gameObject.mesh.draw()
+        for(child in gameObject.children){
+            drawGameObject(child)
+        }
     }
 
     private fun handleInput(){
@@ -216,60 +223,6 @@ object Game{
             -50.0f, -0.75f, -50.0f,  0.2f, 0.4f, 0.2f
         )
         return Mesh(groundVertices)
-    }
-
-    private fun defineCube(): Mesh{
-        val cubeVertices = floatArrayOf(
-            // Positions          // Colors
-            // Back face (Red)
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-
-            // Front face (Green)
-            -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-
-            // Left face (Blue)
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-
-            // Right face (Yellow)
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 0.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f,
-
-            // Bottom face (Magenta)
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f,
-
-            // Top face (Cyan)
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 1.0f
-        )
-        return Mesh(cubeVertices)
     }
 
 }
