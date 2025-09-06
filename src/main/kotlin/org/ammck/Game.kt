@@ -7,6 +7,7 @@ import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
 import org.ammck.engine.objects.ModelLoader
+import org.ammck.engine.physics.PhysicsState
 import org.ammck.game.Player
 import org.ammck.game.PlayerInput
 import org.ammck.engine.render.Mesh
@@ -61,6 +62,9 @@ object Game{
 
     private const val MAX_DELTA_TIME = 0.1f
 
+    private const val RESPAWN_Y_THRESHOLD = -20f
+    private val SPAWN_POINT = Vector3f(0f, 10f, 0f)
+
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var camera: Camera
     private lateinit var physicsEngine: PhysicsEngine
@@ -96,7 +100,7 @@ object Game{
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
 
-        val playerTransform = Transform(position = Vector3f(0f, 10f, 0f))
+        val playerTransform = Transform(position = SPAWN_POINT)
         val playerGameObject = CarFactory.createPlayerCar(playerTransform, chassisMesh, wheelMesh)
 
         player = Player(playerGameObject)
@@ -132,14 +136,18 @@ object Game{
             deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
             lastFrameTime = currentFrameTime
 
-            physicsEngine.update(deltaTime)
+            val physicsReport = physicsEngine.update(deltaTime)
             handleInput()
 
             for(gameObject in gameObjects) {
                 gameObject.update()
             }
 
-            camera.update(deltaTime)
+            val respawnedObjects = physicsReport.objectReport.get(PhysicsState.OBJECT_RESPAWN)
+            when(respawnedObjects?.contains(player.gameObject)){
+                true -> {camera.reset()}
+                false, null -> {camera.update(deltaTime)}
+            }
 
             renderScene()
 

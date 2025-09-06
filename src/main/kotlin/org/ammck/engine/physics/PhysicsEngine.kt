@@ -6,6 +6,8 @@ import org.joml.Vector3f
 class PhysicsEngine {
 
     private val GRAVITY = -9.8f
+    private val RESPAWN_Y_THRESHOLD = -20f
+    private val RESPAWN_POSITION = Vector3f(0f, 10f, 0f)
 
     private val physicsObjects = mutableListOf<GameObject>()
     private val collisions = mutableListOf<Collision>()
@@ -14,7 +16,8 @@ class PhysicsEngine {
         physicsObjects.addAll(newObjects)
     }
 
-    fun update(deltaTime: Float) {
+    fun update(deltaTime: Float): PhysicsStateReport {
+        val report = PhysicsStateReport()
 
         //1. Gravity
         for (obj in physicsObjects) {
@@ -50,10 +53,20 @@ class PhysicsEngine {
             }
         }
 
+        for (obj in physicsObjects){
+            val body = obj.physicsBody ?: continue
+            if(!body.isStatic && obj.transform.position.y < RESPAWN_Y_THRESHOLD){
+                obj.transform.position.set(RESPAWN_POSITION)
+                body.velocity.set(0f, 0f, 0f)
+
+                report.objectReport.getOrPut(PhysicsState.OBJECT_RESPAWN) { mutableListOf() }.add(obj)
+            }
+        }
+
         for (collision in collisions) {
             resolveCollision(collision)
         }
-
+        return report
     }
 
     private fun resolveCollision(collision: Collision) {

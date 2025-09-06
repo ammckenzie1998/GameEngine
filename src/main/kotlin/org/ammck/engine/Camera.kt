@@ -18,7 +18,11 @@ class Camera (
     private val desiredPosition = Vector3f()
 
     fun update(deltaTime: Float){
+        calculateDesiredPosition()
+        position.lerp(desiredPosition, smoothFactor * deltaTime)
+    }
 
+    private fun calculateDesiredPosition(){
         val targetPosition = targetTransform.position
         val targetRotationY = targetTransform.rotationY
 
@@ -28,8 +32,11 @@ class Camera (
         desiredPosition.x = targetPosition.x - verticalDistance
         desiredPosition.y = targetPosition.y + height
         desiredPosition.z = targetPosition.z - horizontalDistance
+    }
 
-        position.lerp(desiredPosition, smoothFactor * deltaTime)
+    fun reset(){
+        calculateDesiredPosition()
+        position.set(desiredPosition)
     }
 
     fun getViewMatrix(): Matrix4f{

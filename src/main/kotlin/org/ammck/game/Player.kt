@@ -6,7 +6,7 @@ import org.joml.Math.lerp
 import org.joml.Math.sin
 import org.joml.Math.sqrt
 
-class Player (private val gameObject: GameObject) {
+class Player (val gameObject: GameObject) {
 
     private val WHEEL_RADIUS = 1.0f
 
