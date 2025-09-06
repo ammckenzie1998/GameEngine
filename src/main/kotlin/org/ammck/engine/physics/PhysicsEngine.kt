@@ -20,6 +20,7 @@ class PhysicsEngine {
         for (obj in physicsObjects) {
             val physicsBody = obj.physicsBody ?: continue
             if (!physicsBody.isStatic) {
+                physicsBody.isGrounded = false
                 physicsBody.velocity.y += GRAVITY * deltaTime
                 obj.transform.position.add(Vector3f(physicsBody.velocity).mul(deltaTime))
             }
@@ -84,6 +85,12 @@ class PhysicsEngine {
         }
         if (!bodyB.isStatic) {
             collision.secondObject.transform.position.add(Vector3f(correction).mul(bodyB.inverseMass))
+        }
+        if(normal.y < 0.5f && !bodyA.isStatic){
+            bodyA.isGrounded = true
+        }
+        if(normal.y > -0.5f && !bodyB.isStatic){
+            bodyB.isGrounded = true
         }
     }
 }

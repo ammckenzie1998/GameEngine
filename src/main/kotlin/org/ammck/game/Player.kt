@@ -21,7 +21,7 @@ class Player (private val gameObject: GameObject) {
         val body = gameObject.physicsBody ?: return
         val currentSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
         //Apply turning
-        if(currentSpeed > MIN_SPEED_TO_TURN) {
+        if(currentSpeed > MIN_SPEED_TO_TURN && body.isGrounded) {
             if (playerInput.isTurnLeftPressed) {
                 gameObject.transform.rotationY += body.turnSpeed * deltaTime
             }
@@ -49,7 +49,6 @@ class Player (private val gameObject: GameObject) {
         if (body.velocity.z != 0.0f) body.velocity.z *= body.dragFactor
 
         val finalSpeed = (body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
-        println(finalSpeed)
         animateWheels(deltaTime, finalSpeed)
         animateSteering(deltaTime, playerInput)
     }

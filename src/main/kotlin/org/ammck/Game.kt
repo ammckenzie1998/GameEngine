@@ -13,6 +13,7 @@ import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.models.CarFactory
+import org.joml.Math.min
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW.GLFW_FALSE
@@ -57,6 +58,8 @@ object Game{
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
+
+    private const val MAX_DELTA_TIME = 0.1f
 
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var camera: Camera
@@ -121,16 +124,16 @@ object Game{
     }
 
     private fun loop(){
-        glClearColor(0.7f, 0.7f, 1.0f, 0.0f)
+        glClearColor(0.992f, 0.369f, 0.325f, 0.0f)
 
         while(!glfwWindowShouldClose(window)){
             val currentFrameTime = glfwGetTime()
-            deltaTime = (currentFrameTime - lastFrameTime).toFloat()
+            val rawDeltaTime = (currentFrameTime - lastFrameTime).toFloat()
+            deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
             lastFrameTime = currentFrameTime
 
-            handleInput()
-
             physicsEngine.update(deltaTime)
+            handleInput()
 
             for(gameObject in gameObjects) {
                 gameObject.update()
