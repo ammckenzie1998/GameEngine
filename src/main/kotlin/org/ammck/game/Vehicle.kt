@@ -1,20 +1,21 @@
 package org.ammck.game
 
 import org.ammck.engine.objects.GameObject
-import org.ammck.engine.physics.PhysicsState
-import org.ammck.engine.physics.PhysicsStateReport
 import org.joml.Math.cos
 import org.joml.Math.lerp
 import org.joml.Math.sin
 import org.joml.Math.sqrt
 
-class VehicleController (val gameObject: GameObject) {
+class Vehicle (val gameObject: GameObject) {
 
     private val WHEEL_RADIUS = 1.0f
     private val MIN_SPEED_TO_TURN = 5f
     private val MAX_STEER_ANGLE = 0.5f
     private val WHEEL_RETURN_TO_ORIGIN_SPEED = 8.0f
     private val AERIAL_ROTATION_SPEED = 10.0f
+
+    private val RAMP_FORCE_Y = 40.0f
+    private val RAMP_FORCE_Z = 20.0f
 
     private var wasAirborne = false
 
@@ -25,8 +26,14 @@ class VehicleController (val gameObject: GameObject) {
         val body = gameObject.physicsBody ?: return
         if (wasAirborne && body.isGrounded){
             gameObject.transform.rotationX = 0.0f
-            gameObject.transform.rotationY = 0.0f
             gameObject.transform.rotationZ = 0.0f
+        }
+        if(body.isOnRamp){
+            body.forces.y += RAMP_FORCE_Y
+            val directionX = sin(gameObject.transform.rotationX)
+            val directionZ = cos(gameObject.transform.rotationX)
+            body.forces.x += directionX * RAMP_FORCE_Z
+            body.forces.z += directionZ * RAMP_FORCE_Z
         }
         when(body.isGrounded){
             true -> { groundControl(deltaTime, vehicleCommands) }
@@ -49,14 +56,14 @@ class VehicleController (val gameObject: GameObject) {
             val directionX = sin(gameObject.transform.rotationY)
             val directionZ = cos(gameObject.transform.rotationY)
 
-            body.velocity.x += directionX * body.accelerationFactor * deltaTime * commands.throttle
-            body.velocity.z += directionZ * body.accelerationFactor * deltaTime * commands.throttle
+            body.forces.x += directionX * body.accelerationFactor * commands.throttle
+            body.forces.z += directionZ * body.accelerationFactor * commands.throttle
         }
 
         if (body.velocity.x != 0.0f) body.velocity.x *= body.dragFactor
         if (body.velocity.z != 0.0f) body.velocity.z *= body.dragFactor
 
-        val finalSpeed = (body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
+        val finalSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
         animateWheels(deltaTime, finalSpeed)
     }
 

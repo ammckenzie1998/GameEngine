@@ -5,7 +5,7 @@ import org.joml.Vector3f
 
 class PhysicsEngine {
 
-    private val GRAVITY = -9.8f
+    private val GRAVITY_FORCE = Vector3f(0f, -9.8f, 0f)
     private val RESPAWN_Y_THRESHOLD = -20f
     private val RESPAWN_POSITION = Vector3f(0f, 10f, 0f)
 
@@ -16,15 +16,21 @@ class PhysicsEngine {
         physicsObjects.addAll(newObjects)
     }
 
-    fun update(deltaTime: Float): PhysicsStateReport {
-        val report = PhysicsStateReport()
-
-        //1. Gravity
+    fun update(deltaTime: Float){
+        //1. Forces
         for (obj in physicsObjects) {
             val physicsBody = obj.physicsBody ?: continue
             if (!physicsBody.isStatic) {
                 physicsBody.isGrounded = false
-                physicsBody.velocity.y += GRAVITY * deltaTime
+                physicsBody.isOnRamp = false
+                physicsBody.isRespawning = false
+
+                physicsBody.forces.add(GRAVITY_FORCE)
+
+                val acceleration = Vector3f(physicsBody.forces).mul(physicsBody.inverseMass)
+                physicsBody.velocity.add(acceleration.mul(deltaTime))
+
+                physicsBody.forces.set(0f, 0f, 0f)
                 obj.transform.position.add(Vector3f(physicsBody.velocity).mul(deltaTime))
             }
         }
@@ -59,20 +65,29 @@ class PhysicsEngine {
                 obj.transform.position.set(RESPAWN_POSITION)
                 body.velocity.set(0f, 0f, 0f)
 
-                report.objectReport.getOrPut(obj) { mutableListOf() }.add(PhysicsState.OBJECT_RESPAWN)
+                body.isRespawning = true
             }
         }
 
         for (collision in collisions) {
             resolveCollision(collision)
         }
-        return report
     }
 
     private fun resolveCollision(collision: Collision) {
         val bodyA = collision.firstObject.physicsBody!!
         val bodyB = collision.secondObject.physicsBody!!
         val normal = collision.normal
+
+
+        if(bodyA.isRamp && !bodyB.isStatic){
+            bodyB.isOnRamp = true
+            return
+        }
+        if(bodyB.isRamp && !bodyA.isStatic){
+            bodyA.isOnRamp = true
+            return
+        }
 
         // --- 1. Calculate Relative Velocity ---
         val relativeVelocity = Vector3f(bodyB.velocity).sub(bodyA.velocity)
@@ -99,6 +114,7 @@ class PhysicsEngine {
         if (!bodyB.isStatic) {
             collision.secondObject.transform.position.add(Vector3f(correction).mul(bodyB.inverseMass))
         }
+
         if(normal.y < 0.5f && !bodyA.isStatic){
             bodyA.isGrounded = true
         }

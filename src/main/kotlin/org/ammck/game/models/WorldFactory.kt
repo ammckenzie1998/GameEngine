@@ -33,7 +33,7 @@ object WorldFactory {
 
             val transform = Transform(position = stepPosition, scale = stepSize)
             val boundingBox = AxisAlignedBoundingBox(transform.position, stepSize)
-            val body = PhysicsBody(boundingBox, isStatic = true)
+            val body = PhysicsBody(boundingBox, isStatic = true, isRamp = true)
             val stepObject = GameObject(transform, stepMesh, body)
             rampObjects.add(stepObject)
         }

@@ -7,7 +7,6 @@ import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
 import org.ammck.engine.objects.ModelLoader
-import org.ammck.engine.physics.PhysicsState
 import org.ammck.game.Player
 import org.ammck.game.VehicleCommands
 import org.ammck.engine.render.Mesh
@@ -149,9 +148,7 @@ object Game{
             for(gameObject in gameObjects) {
                 gameObject.update()
             }
-
-            val playerState = physicsReport.objectReport.get(player.gameObject)
-            when(playerState?.contains(PhysicsState.OBJECT_RESPAWN)){
+            when(player.gameObject.physicsBody?.isRespawning){
                 true -> {camera.reset()}
                 false, null -> {camera.update(deltaTime)}
             }
