@@ -9,11 +9,13 @@ import org.ammck.engine.Transform
 import org.ammck.engine.objects.ModelLoader
 import org.ammck.engine.physics.PhysicsState
 import org.ammck.game.Player
-import org.ammck.game.PlayerInput
+import org.ammck.game.VehicleCommands
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
+import org.ammck.game.PlayerInput
 import org.ammck.game.models.CarFactory
+import org.ammck.game.models.WorldFactory
 import org.joml.Math.min
 import org.joml.Matrix4f
 import org.joml.Vector3f
@@ -23,6 +25,7 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_W
 import org.lwjgl.glfw.GLFW.GLFW_KEY_A
 import org.lwjgl.glfw.GLFW.GLFW_KEY_S
 import org.lwjgl.glfw.GLFW.GLFW_KEY_D
+import org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
 import org.lwjgl.glfw.GLFW.GLFW_RESIZABLE
 import org.lwjgl.glfw.GLFW.GLFW_TRUE
@@ -94,33 +97,37 @@ object Game{
 
         physicsEngine = PhysicsEngine()
 
-        val chassisMesh = ModelLoader.load("models/car.ammodel")
         wheelMesh = ModelLoader.load("models/wheel.ammodel")
+        val chassisMesh = ModelLoader.load("models/car.ammodel")
+        val groundMesh = defineGround()
+        val cubeMesh = ModelLoader.load("models/cube.ammodel")
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
 
-        val playerTransform = Transform(position = SPAWN_POINT)
-        val playerGameObject = CarFactory.createPlayerCar(playerTransform, chassisMesh, wheelMesh)
-
+        val playerGameObject = CarFactory.createPlayerCar(
+            Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         player = Player(playerGameObject)
         gameObjects.add(playerGameObject)
 
-        val groundTransform = Transform()
-        val groundBoundingBox = AxisAlignedBoundingBox(groundTransform.position, Vector3f(100f, 0.01f, 100f))
-        val groundBody = PhysicsBody(groundBoundingBox, true)
-        val groundMesh = defineGround()
-        val groundGameObject = GameObject(groundTransform, groundMesh, groundBody)
-        gameObjects.add(groundGameObject)
+        createGameObject(
+            groundMesh,
+            isStatic = true,
+            position=Vector3f(0f,0f,0f),
+            boundingBoxSize=Vector3f(100f, 0.01f, 100f))
 
-        val cubeTransform = Transform()
-        val cubeBoundingBox = AxisAlignedBoundingBox(cubeTransform.position, Vector3f(1.0f, 1.0f, 1.0f))
-        val cubeBody = PhysicsBody(cubeBoundingBox, true)
-        val cubeMesh = ModelLoader.load("models/cube.ammodel")
-        val cubeGameObject = GameObject(cubeTransform, cubeMesh, cubeBody)
-        gameObjects.add(cubeGameObject)
+        createGameObject(
+            cubeMesh,
+            isStatic = true,
+            position=Vector3f(20f, 0f, 0f),
+            boundingBoxSize=Vector3f(1.0f, 1.0f, 1.0f))
 
-        physicsEngine.addObject(playerGameObject, groundGameObject, cubeGameObject)
+        var rampObjects = WorldFactory.createStaircaseRamp(
+            position=Vector3f(0f, -0.5f, 30f),
+        )
+        gameObjects.addAll(rampObjects)
+
+        physicsEngine.addObject(*gameObjects.toTypedArray())
 
         camera = Camera(playerGameObject.transform, distance = 12.0f)
         setupMatrices()
@@ -143,8 +150,8 @@ object Game{
                 gameObject.update()
             }
 
-            val respawnedObjects = physicsReport.objectReport.get(PhysicsState.OBJECT_RESPAWN)
-            when(respawnedObjects?.contains(player.gameObject)){
+            val playerState = physicsReport.objectReport.get(player.gameObject)
+            when(playerState?.contains(PhysicsState.OBJECT_RESPAWN)){
                 true -> {camera.reset()}
                 false, null -> {camera.update(deltaTime)}
             }
@@ -234,7 +241,8 @@ object Game{
             glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
             glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
             glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
-            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS
+            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
         )
         player.update(deltaTime, playerInput)
     }
@@ -242,6 +250,19 @@ object Game{
     private fun setupMatrices(){
         val aspectRatio = INITIAL_WINDOW_WIDTH.toFloat() / INITIAL_WINDOW_HEIGHT.toFloat()
         projectionMatrix.perspective(Math.toRadians(45.0).toFloat(), aspectRatio, 0.1f, 100.0f)
+    }
+
+    private fun createGameObject(
+        mesh: Mesh,
+        isStatic: Boolean,
+        position: Vector3f,
+        boundingBoxSize: Vector3f,
+    ){
+        val objectTransform = Transform(position)
+        val objectBoundingBox = AxisAlignedBoundingBox(position, boundingBoxSize)
+        val objectBody = PhysicsBody(objectBoundingBox, isStatic)
+        val gameObject = GameObject(objectTransform, mesh, objectBody)
+        gameObjects.add(gameObject)
     }
 
     private fun defineGround(): Mesh{

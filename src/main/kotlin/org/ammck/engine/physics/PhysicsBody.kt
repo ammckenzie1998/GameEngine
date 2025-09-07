@@ -8,7 +8,7 @@ class PhysicsBody(
     val isStatic: Boolean = false,
     val turnSpeed: Float = 2.5f,
     val accelerationFactor: Float = 100f,
-    val dragFactor: Float = 0.99f
+    val dragFactor: Float = 0.99f,
 ){
 
     val velocity: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)

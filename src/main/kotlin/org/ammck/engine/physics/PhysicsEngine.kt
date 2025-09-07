@@ -59,7 +59,7 @@ class PhysicsEngine {
                 obj.transform.position.set(RESPAWN_POSITION)
                 body.velocity.set(0f, 0f, 0f)
 
-                report.objectReport.getOrPut(PhysicsState.OBJECT_RESPAWN) { mutableListOf() }.add(obj)
+                report.objectReport.getOrPut(obj) { mutableListOf() }.add(PhysicsState.OBJECT_RESPAWN)
             }
         }
 

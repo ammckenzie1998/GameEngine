@@ -32,6 +32,7 @@ class GameObject(
             .translate(transform.position)
             .rotateY(transform.rotationY)
             .rotateX(transform.rotationX)
+            .rotateZ(transform.rotationZ)
             .scale(transform.scale)
 
         val parentGlobalMatrix = parent?.globalMatrix ?: Matrix4f().identity()
