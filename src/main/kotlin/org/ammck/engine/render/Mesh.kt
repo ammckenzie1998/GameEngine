@@ -1,5 +1,6 @@
 package org.ammck.engine.render
 
+import org.joml.Vector3f
 import org.lwjgl.opengl.GL11.GL_FLOAT
 import org.lwjgl.opengl.GL11.GL_TRIANGLES
 import org.lwjgl.opengl.GL11.glDrawArrays
@@ -14,12 +15,13 @@ import org.lwjgl.opengl.GL20.glVertexAttribPointer
 import org.lwjgl.opengl.GL30.glBindVertexArray
 import org.lwjgl.opengl.GL30.glDeleteVertexArrays
 import org.lwjgl.opengl.GL30.glGenVertexArrays
+import javax.swing.text.Position
 
-class Mesh (vertices: FloatArray) {
+class Mesh (val vertices: FloatArray) {
 
     private val vaoId: Int
     private val vboId: Int
-    private val vertexCount: Int
+    val vertexCount: Int
 
     companion object{
         private const val POSITION_ATTRIBUTE_LOCATION = 0
@@ -88,6 +90,18 @@ class Mesh (vertices: FloatArray) {
     fun cleanup(){
         glDeleteBuffers(vboId)
         glDeleteVertexArrays(vaoId)
+    }
+
+    fun getVertexPosition(position: Int): Vector3f{
+        val ix = VERTEX_FLOAT_COUNT * position + POSITION_ATTRIBUTE_LOCATION
+        val iy = ix + 1
+        val iz = iy + 1
+
+        return Vector3f(
+            vertices[ix],
+            vertices[iy],
+            vertices[iz]
+        )
     }
 
 }

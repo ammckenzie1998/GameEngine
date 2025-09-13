@@ -5,6 +5,10 @@ import org.joml.Math.cos
 import org.joml.Math.lerp
 import org.joml.Math.sin
 import org.joml.Math.sqrt
+import org.joml.Matrix4f
+import org.joml.Quaternionf
+import org.joml.Vector3f
+import java.util.Vector
 
 class Vehicle (val gameObject: GameObject) {
 
@@ -13,9 +17,7 @@ class Vehicle (val gameObject: GameObject) {
     private val MAX_STEER_ANGLE = 0.5f
     private val WHEEL_RETURN_TO_ORIGIN_SPEED = 8.0f
     private val AERIAL_ROTATION_SPEED = 10.0f
-
-    private val RAMP_FORCE_Y = 40.0f
-    private val RAMP_FORCE_Z = 20.0f
+    private val GROUND_ALIGNMENT_SPEED = 8.0f
 
     private var wasAirborne = false
 
@@ -25,15 +27,8 @@ class Vehicle (val gameObject: GameObject) {
     ){
         val body = gameObject.physicsBody ?: return
         if (wasAirborne && body.isGrounded){
-            gameObject.transform.rotationX = 0.0f
-            gameObject.transform.rotationZ = 0.0f
-        }
-        if(body.isOnRamp){
-            body.forces.y += RAMP_FORCE_Y
-            val directionX = sin(gameObject.transform.rotationX)
-            val directionZ = cos(gameObject.transform.rotationX)
-            body.forces.x += directionX * RAMP_FORCE_Z
-            body.forces.z += directionZ * RAMP_FORCE_Z
+            val rotationY = gameObject.transform.orientation.getEulerAnglesXYZ(Vector3f()).y
+            gameObject.transform.orientation.identity().rotateY(rotationY)
         }
         when(body.isGrounded){
             true -> { groundControl(deltaTime, vehicleCommands) }
@@ -45,19 +40,28 @@ class Vehicle (val gameObject: GameObject) {
 
     private fun groundControl(deltaTime: Float, commands: VehicleCommands){
         val body = gameObject.physicsBody!!
+        val transform = gameObject.transform
+
         val currentSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
-        //Apply turning
+        var angleChange = 0.0f
         if(currentSpeed > MIN_SPEED_TO_TURN) {
-            gameObject.transform.rotationY -= commands.steerDirection * body.turnSpeed * deltaTime
+            angleChange = -commands.steerDirection * body.turnSpeed * deltaTime
         }
 
+        val currentEuler = transform.orientation.getEulerAnglesXYZ(Vector3f())
+        val targetRotationQuat = Quaternionf().rotationTo(Vector3f(0f, 1f, 0f), body.groundNormal)
+        val targetEuler = targetRotationQuat.getEulerAnglesXYZ(Vector3f())
+        val t = GROUND_ALIGNMENT_SPEED * deltaTime
+        val newPitch = lerp(currentEuler.x, targetEuler.x, t)
+        val newRoll = lerp(currentEuler.z, targetEuler.z, t)
+        transform.orientation.identity()
+            .rotateY(currentEuler.y + angleChange)
+            .rotateX(newPitch)
+            .rotateZ(newRoll)
         //Apply acceleration
         if(commands.throttle != 0.0f){
-            val directionX = sin(gameObject.transform.rotationY)
-            val directionZ = cos(gameObject.transform.rotationY)
-
-            body.forces.x += directionX * body.accelerationFactor * commands.throttle
-            body.forces.z += directionZ * body.accelerationFactor * commands.throttle
+            val forward = Vector3f(0f, 0f, -1f).rotate(transform.orientation)
+            body.forces.add(forward.mul(body.accelerationFactor * -commands.throttle))
         }
 
         if (body.velocity.x != 0.0f) body.velocity.x *= body.dragFactor
@@ -70,25 +74,10 @@ class Vehicle (val gameObject: GameObject) {
     private fun aerialControl(deltaTime: Float, commands: VehicleCommands){
         val transform = gameObject.transform
         if(commands.pitchMode){
-            if(commands.throttle > 0.0f){
-                transform.rotationX += AERIAL_ROTATION_SPEED * deltaTime
-            }
-            if(commands.throttle < 0.0f){
-                transform.rotationX -= AERIAL_ROTATION_SPEED * deltaTime
-            }
-            if(commands.steerDirection > 0.0f){
-                transform.rotationZ += AERIAL_ROTATION_SPEED * deltaTime
-            }
-            if(commands.steerDirection < 0.0f){
-                transform.rotationZ -= AERIAL_ROTATION_SPEED * deltaTime
-            }
+            transform.orientation.rotateLocalX(commands.throttle * AERIAL_ROTATION_SPEED * deltaTime)
+            transform.orientation.rotateLocalZ(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
         } else{
-            if(commands.steerDirection < 0.0f){
-                transform.rotationY += AERIAL_ROTATION_SPEED * deltaTime
-            }
-            if(commands.steerDirection > 0.0f){
-                transform.rotationY -= AERIAL_ROTATION_SPEED * deltaTime
-            }
+            transform.orientation.rotateLocalY(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
         }
     }
 
@@ -96,34 +85,34 @@ class Vehicle (val gameObject: GameObject) {
         val body = gameObject.physicsBody ?: return
         if(speed < 0.1f) return
 
-        val forwardX = sin(gameObject.transform.rotationY)
-        val forwardZ = cos(gameObject.transform.rotationY)
-        val dotProduct = (body.velocity.x * forwardX) + (body.velocity.z * forwardZ)
+        val forward = Vector3f(0f, 0f, -1f).rotate(gameObject.transform.orientation)
+        val dotProduct = body.velocity.dot(forward)
         val rotationDirection = if (dotProduct > 0) 1.0f else -1.0f
 
         val distanceTraveled = speed * deltaTime
         val rotationDelta = (distanceTraveled / WHEEL_RADIUS) * rotationDirection
 
         for(wheel in gameObject.children){
-            wheel.transform.rotationX += rotationDelta
+            wheel.transform.orientation.rotateLocalX(rotationDelta)
         }
     }
 
     private fun animateSteering(deltaTime: Float, commands: VehicleCommands){
         val targetAngle = when{
-            commands.steerDirection > 0.0f -> MAX_STEER_ANGLE
-            commands.steerDirection < 0.0f -> -MAX_STEER_ANGLE
+            commands.steerDirection < 0.0f -> MAX_STEER_ANGLE
+            commands.steerDirection > 0.0f -> -MAX_STEER_ANGLE
             else -> 0.0f
         }
 
         //First 2 children turn. Should not assume this later on
         if(gameObject.children.size >= 2){
-            val flWheel = gameObject.children[0]
-            val frWheel = gameObject.children[1]
+            val flWheel = gameObject.children[2]
+            val frWheel = gameObject.children[3]
 
             val t = WHEEL_RETURN_TO_ORIGIN_SPEED * deltaTime
-            flWheel.transform.rotationY = lerp(flWheel.transform.rotationY, targetAngle, t)
-            frWheel.transform.rotationY = lerp(flWheel.transform.rotationY, targetAngle, t)
+            val targetOrientation = Quaternionf().rotateY(targetAngle)
+            flWheel.transform.orientation.slerp(targetOrientation, t)
+            frWheel.transform.orientation.slerp(targetOrientation, t)
         }
     }
 }

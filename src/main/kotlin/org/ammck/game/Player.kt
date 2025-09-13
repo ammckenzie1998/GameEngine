@@ -11,8 +11,8 @@ class Player (val gameObject: GameObject) {
         playerInput: PlayerInput
     ){
         val throttle = when {
-            playerInput.isMoveForwardPressed -> 1.0f
-            playerInput.isMoveBackwardPressed -> -1.0f
+            playerInput.isMoveForwardPressed -> -1.0f
+            playerInput.isMoveBackwardPressed -> 1.0f
             else -> 0.0f
         }
         val steerDirection = when {

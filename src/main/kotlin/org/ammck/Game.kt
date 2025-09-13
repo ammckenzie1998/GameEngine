@@ -45,11 +45,16 @@ import org.lwjgl.glfw.GLFW.glfwTerminate
 import org.lwjgl.glfw.GLFW.glfwWindowHint
 import org.lwjgl.glfw.GLFW.glfwWindowShouldClose
 import org.lwjgl.opengl.GL.createCapabilities
+import org.lwjgl.opengl.GL11.GL_BLEND
 import org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT
 import org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT
 import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
+import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
+import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
+import org.lwjgl.opengl.GL11.glBlendFunc
 import org.lwjgl.opengl.GL11.glClear
 import org.lwjgl.opengl.GL11.glClearColor
+import org.lwjgl.opengl.GL11.glDisable
 import org.lwjgl.opengl.GL11.glEnable
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
@@ -68,12 +73,15 @@ object Game{
     private val SPAWN_POINT = Vector3f(0f, 10f, 0f)
 
     private lateinit var shaderProgram: ShaderProgram
+    private lateinit var debugShaderProgram: ShaderProgram
+
     private lateinit var camera: Camera
     private lateinit var physicsEngine: PhysicsEngine
 
     private lateinit var player: Player
     private val gameObjects = mutableListOf<GameObject>()
     private lateinit var wheelMesh: Mesh
+    private lateinit var cubeMesh: Mesh
 
     private lateinit var groundTexture: Texture
     private lateinit var defaultTexture: Texture
@@ -93,13 +101,15 @@ object Game{
     private fun init(){
         initWindow()
         shaderProgram = ShaderProgram("shaders/default.vert", "shaders/default.frag")
+        debugShaderProgram = ShaderProgram("shaders/debug.vert", "shaders/debug.frag")
 
         physicsEngine = PhysicsEngine()
 
         wheelMesh = ModelLoader.load("models/wheel.ammodel")
         val chassisMesh = ModelLoader.load("models/car.ammodel")
         val groundMesh = defineGround()
-        val cubeMesh = ModelLoader.load("models/cube.ammodel")
+        cubeMesh = ModelLoader.load("models/cube.ammodel")
+        val rampMesh = ModelLoader.load("models/ramp.ammodel")
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
@@ -109,11 +119,11 @@ object Game{
         player = Player(playerGameObject)
         gameObjects.add(playerGameObject)
 
-        createGameObject(
+        val ground = createGameObject(
             groundMesh,
             isStatic = true,
             position=Vector3f(0f,0f,0f),
-            boundingBoxSize=Vector3f(100f, 0.01f, 100f))
+            boundingBoxSize=Vector3f(0f, -10f, 0f))
 
         createGameObject(
             cubeMesh,
@@ -121,12 +131,16 @@ object Game{
             position=Vector3f(20f, 0f, 0f),
             boundingBoxSize=Vector3f(1.0f, 1.0f, 1.0f))
 
-        var rampObjects = WorldFactory.createStaircaseRamp(
-            position=Vector3f(0f, -0.5f, 30f),
+        val ramp = createGameObject(
+            rampMesh,
+            isStatic = true,
+            position = Vector3f(0f, -0.5f, -30f),
+            boundingBoxSize=Vector3f(0f, 0f, 0f)
         )
-        gameObjects.addAll(rampObjects)
+        ramp.transform.orientation.rotateY(Math.toRadians(180.0).toFloat())
 
-        physicsEngine.addObject(*gameObjects.toTypedArray())
+        physicsEngine.addObjects(*gameObjects.toTypedArray())
+        physicsEngine.addWorldObjects(ramp, ground)
 
         camera = Camera(playerGameObject.transform, distance = 12.0f)
         setupMatrices()
@@ -142,18 +156,20 @@ object Game{
             deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
             lastFrameTime = currentFrameTime
 
-            val physicsReport = physicsEngine.update(deltaTime)
             handleInput()
-
             for(gameObject in gameObjects) {
                 gameObject.update()
             }
+
+            physicsEngine.update(deltaTime)
+
             when(player.gameObject.physicsBody?.isRespawning){
                 true -> {camera.reset()}
                 false, null -> {camera.update(deltaTime)}
             }
 
             renderScene()
+            renderDebugVisuals()
 
             glfwPollEvents()
             glfwSwapBuffers(window)
@@ -225,6 +241,47 @@ object Game{
         shaderProgram.unbind()
     }
 
+    private fun renderDebugVisuals(){
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        debugShaderProgram.bind()
+
+        val viewMatrix = camera.getViewMatrix()
+
+        debugShaderProgram.setUniform("projection", projectionMatrix)
+        debugShaderProgram.setUniform("view", viewMatrix)
+
+        val rayStartSize = Vector3f(0.1f)
+        val rayHitSize = Vector3f(1f)
+        val rayMissLength = 0.5f
+
+        for (debugData in physicsEngine.debugRaycastResults){
+            val ray = debugData.ray
+            val hit = debugData.hit
+            val color = debugData.color
+            val startMatrix = Matrix4f().translate(ray.origin).scale(rayStartSize)
+            debugShaderProgram.setUniform("model", startMatrix)
+            cubeMesh.draw()
+
+            if (hit != null){
+                val hitMatrix = Matrix4f().translate(hit.point).scale(rayHitSize)
+                debugShaderProgram.setUniform("model", hitMatrix)
+                debugShaderProgram.setUniform("debugColor", color)
+                cubeMesh.draw()
+            } else {
+                val endPoint = Vector3f(ray.origin).add(Vector3f(ray.direction).mul(rayMissLength))
+                val missMatrix = Matrix4f().translate(endPoint).scale(rayStartSize)
+                debugShaderProgram.setUniform("model", missMatrix)
+                debugShaderProgram.setUniform("debugColor", color)
+                cubeMesh.draw()
+            }
+        }
+
+        debugShaderProgram.unbind()
+        glDisable(GL_BLEND)
+    }
+
     private fun drawGameObject(gameObject: GameObject){
         shaderProgram.setUniform("model", gameObject.globalMatrix)
         gameObject.mesh.draw()
@@ -249,29 +306,30 @@ object Game{
         projectionMatrix.perspective(Math.toRadians(45.0).toFloat(), aspectRatio, 0.1f, 100.0f)
     }
 
-    private fun createGameObject(
+    private fun createGameObject (
         mesh: Mesh,
         isStatic: Boolean,
         position: Vector3f,
         boundingBoxSize: Vector3f,
-    ){
+    ): GameObject{
         val objectTransform = Transform(position)
         val objectBoundingBox = AxisAlignedBoundingBox(position, boundingBoxSize)
         val objectBody = PhysicsBody(objectBoundingBox, isStatic)
-        val gameObject = GameObject(objectTransform, mesh, objectBody)
+        val gameObject = GameObject("Object", objectTransform, mesh, objectBody)
         gameObjects.add(gameObject)
+        return gameObject
     }
 
     private fun defineGround(): Mesh{
         val groundVertices = floatArrayOf(
             // Positions          // Colors (tint)     // Texture Coords (UVs)
-            -50.0f, -0.75f, -50.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,
-            50.0f, -0.75f, -50.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,
-            50.0f, -0.75f,  50.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
+            -50.0f, -0.75f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,
+            50.0f, -0.75f, -500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,
+            50.0f, -0.75f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
 
-            50.0f, -0.75f,  50.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
-            -50.0f, -0.75f,  50.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-            -50.0f, -0.75f, -50.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
+            50.0f, -0.75f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
+            -50.0f, -0.75f,  500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+            -50.0f, -0.75f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
         )
         return Mesh(groundVertices)
     }

@@ -24,14 +24,12 @@ class Camera (
 
     private fun calculateDesiredPosition(){
         val targetPosition = targetTransform.position
-        val targetRotationY = targetTransform.rotationY
+        val targetOrientation = targetTransform.orientation
+        val forwardDirection = Vector3f(0f, 0f, -1f).rotate(targetOrientation)
 
-        val horizontalDistance = distance * cos(targetRotationY)
-        val verticalDistance = distance * sin(targetRotationY)
-
-        desiredPosition.x = targetPosition.x - verticalDistance
-        desiredPosition.y = targetPosition.y + height
-        desiredPosition.z = targetPosition.z - horizontalDistance
+        desiredPosition.set(targetPosition)
+            .sub(forwardDirection.mul(distance))
+            .add(0f, height, 0f)
     }
 
     fun reset(){

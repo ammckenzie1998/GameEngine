@@ -1,7 +1,9 @@
 package org.ammck.engine.render
 
 import org.ammck.util.FileUtil
+import org.joml.Matrix3f
 import org.joml.Matrix4f
+import org.joml.Vector3f
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL20.GL_COMPILE_STATUS
 import org.lwjgl.opengl.GL20.GL_VERTEX_SHADER
@@ -22,6 +24,8 @@ import org.lwjgl.opengl.GL20.glGetUniformLocation
 import org.lwjgl.opengl.GL20.glLinkProgram
 import org.lwjgl.opengl.GL20.glShaderSource
 import org.lwjgl.opengl.GL20.glUniform1i
+import org.lwjgl.opengl.GL20.glUniform3f
+import org.lwjgl.opengl.GL20.glUniformMatrix3fv
 import org.lwjgl.opengl.GL20.glUniformMatrix4fv
 import org.lwjgl.opengl.GL20.glUseProgram
 import java.io.File
@@ -84,6 +88,13 @@ class ShaderProgram (vertexPath: String, fragmentPath: String) {
         val location = glGetUniformLocation(programId, uniformName)
         if(location != -1){
             glUniform1i(location, value)
+        }
+    }
+
+    fun setUniform(uniformName: String, value: Vector3f){
+        val location = glGetUniformLocation(programId, uniformName)
+        if(location != -1){
+            glUniform3f(location, value.x, value.y, value.z)
         }
     }
 

@@ -15,6 +15,7 @@ class PhysicsBody(
     val velocity: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)
     val forces: Vector3f = Vector3f(0.0f,0.0f,0.0f)
     val inverseMass: Float = if (isStatic) 0.0f else 1.0f
+    var groundNormal: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)
 
     var isGrounded: Boolean = false
     var isOnRamp: Boolean = false
