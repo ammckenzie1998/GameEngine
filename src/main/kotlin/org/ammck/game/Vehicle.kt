@@ -24,15 +24,19 @@ class Vehicle (val gameObject: GameObject) {
     fun update(
         deltaTime: Float,
         vehicleCommands: VehicleCommands
-    ){
+    ) {
         val body = gameObject.physicsBody ?: return
-        if (wasAirborne && body.isGrounded){
-            val rotationY = gameObject.transform.orientation.getEulerAnglesXYZ(Vector3f()).y
-            gameObject.transform.orientation.identity().rotateY(rotationY)
+        if (wasAirborne && body.isGrounded) {
+            val yRotation = gameObject.transform.orientation.getEulerAnglesXYZ(Vector3f()).y
+            gameObject.transform.orientation.identity().rotateY(yRotation)
         }
-        when(body.isGrounded){
-            true -> { groundControl(deltaTime, vehicleCommands) }
-            false -> { aerialControl(deltaTime, vehicleCommands) }
+        when (body.isGrounded) {
+            true -> {
+                groundControl(deltaTime, vehicleCommands)
+            }
+            false -> {
+                aerialControl(deltaTime, vehicleCommands)
+            }
         }
         animateSteering(deltaTime, vehicleCommands)
         wasAirborne = !body.isGrounded
@@ -43,22 +47,17 @@ class Vehicle (val gameObject: GameObject) {
         val transform = gameObject.transform
 
         val currentSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
-        var angleChange = 0.0f
-        if(currentSpeed > MIN_SPEED_TO_TURN) {
-            angleChange = -commands.steerDirection * body.turnSpeed * deltaTime
+        if (currentSpeed > MIN_SPEED_TO_TURN) {
+            transform.orientation.rotateAxis(-commands.steerDirection * body.turnSpeed * deltaTime, 0f, 1f, 0f)
         }
 
-        val currentEuler = transform.orientation.getEulerAnglesXYZ(Vector3f())
-        val targetRotationQuat = Quaternionf().rotationTo(Vector3f(0f, 1f, 0f), body.groundNormal)
-        val targetEuler = targetRotationQuat.getEulerAnglesXYZ(Vector3f())
-        val t = GROUND_ALIGNMENT_SPEED * deltaTime
-        val newPitch = lerp(currentEuler.x, targetEuler.x, t)
-        val newRoll = lerp(currentEuler.z, targetEuler.z, t)
-        transform.orientation.identity()
-            .rotateY(currentEuler.y + angleChange)
-            .rotateX(newPitch)
-            .rotateZ(newRoll)
-        //Apply acceleration
+        if (body.groundNormal.lengthSquared() > 0.1f) {
+            val currentUp = Vector3f(0f, 1f, 0f).rotate(transform.orientation)
+            val alignRotation = Quaternionf().rotationTo(currentUp, body.groundNormal)
+            transform.orientation.slerp(alignRotation.mul(transform.orientation, Quaternionf()), GROUND_ALIGNMENT_SPEED * deltaTime)
+        }
+
+
         if(commands.throttle != 0.0f){
             val forward = Vector3f(0f, 0f, -1f).rotate(transform.orientation)
             body.forces.add(forward.mul(body.accelerationFactor * -commands.throttle))
