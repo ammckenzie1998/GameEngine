@@ -86,7 +86,7 @@ class Vehicle (val gameObject: GameObject) {
 
         val forward = Vector3f(0f, 0f, -1f).rotate(gameObject.transform.orientation)
         val dotProduct = body.velocity.dot(forward)
-        val rotationDirection = if (dotProduct > 0) 1.0f else -1.0f
+        val rotationDirection = if (dotProduct > 0) -1.0f else 1.0f
 
         val distanceTraveled = speed * deltaTime
         val rotationDelta = (distanceTraveled / WHEEL_RADIUS) * rotationDirection
