@@ -27,7 +27,9 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_W
 import org.lwjgl.glfw.GLFW.GLFW_KEY_A
 import org.lwjgl.glfw.GLFW.GLFW_KEY_S
 import org.lwjgl.glfw.GLFW.GLFW_KEY_D
+import org.lwjgl.glfw.GLFW.GLFW_KEY_E
 import org.lwjgl.glfw.GLFW.GLFW_KEY_F1
+import org.lwjgl.glfw.GLFW.GLFW_KEY_Q
 import org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE
 import org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
@@ -355,6 +357,8 @@ object Game{
                     glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
                     glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
                     glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS,
                     mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
                     mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
                 )

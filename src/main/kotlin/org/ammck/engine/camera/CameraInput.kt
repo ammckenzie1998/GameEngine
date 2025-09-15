@@ -5,6 +5,8 @@ class CameraInput (
     val moveBackward: Boolean = false,
     val moveLeft: Boolean = false,
     val moveRight: Boolean = false,
+    val moveUp: Boolean = false,
+    val moveDown: Boolean = false,
     val mouseDeltaX: Float = 0.0f,
     val mouseDeltaY: Float = 0.0f
 )

@@ -31,6 +31,8 @@ class FreeFlyCamera(initialPosition: Vector3f) {
         if (cameraInput.moveBackward) transform.position.sub(Vector3f(forwardDirection).mul(velocity))
         if (cameraInput.moveRight) transform.position.add(Vector3f(rightDirection).mul(velocity))
         if (cameraInput.moveLeft) transform.position.sub(Vector3f(rightDirection).mul(velocity))
+        if (cameraInput.moveUp) transform.position.add(Vector3f(upDirection).mul(velocity))
+        if (cameraInput.moveDown) transform.position.sub(Vector3f(upDirection).mul(velocity))
     }
 
     fun getViewMatrix(): Matrix4f {
