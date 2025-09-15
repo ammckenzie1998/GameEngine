@@ -1,7 +1,6 @@
-package org.ammck.engine
+package org.ammck.engine.camera
 
-import org.joml.Math.cos
-import org.joml.Math.sin
+import org.ammck.engine.Transform
 import org.joml.Matrix4f
 import org.joml.Vector3f
 
@@ -37,7 +36,7 @@ class Camera (
         position.set(desiredPosition)
     }
 
-    fun getViewMatrix(): Matrix4f{
+    fun getViewMatrix(): Matrix4f {
         return viewMatrix.identity().lookAt(
             position,
             targetTransform.position,

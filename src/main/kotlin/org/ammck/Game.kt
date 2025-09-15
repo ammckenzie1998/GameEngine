@@ -1,17 +1,20 @@
 package org.ammck
 
 import org.ammck.engine.physics.AxisAlignedBoundingBox
-import org.ammck.engine.Camera
+import org.ammck.engine.camera.Camera
 import org.ammck.engine.objects.GameObject
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
+import org.ammck.engine.camera.CameraInput
+import org.ammck.engine.camera.FreeFlyCamera
 import org.ammck.engine.objects.ModelLoader
 import org.ammck.game.Player
 import org.ammck.game.VehicleCommands
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
+import org.ammck.game.GameMode
 import org.ammck.game.PlayerInput
 import org.ammck.game.models.CarFactory
 import org.ammck.game.models.WorldFactory
@@ -24,7 +27,9 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_W
 import org.lwjgl.glfw.GLFW.GLFW_KEY_A
 import org.lwjgl.glfw.GLFW.GLFW_KEY_S
 import org.lwjgl.glfw.GLFW.GLFW_KEY_D
+import org.lwjgl.glfw.GLFW.GLFW_KEY_F1
 import org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE
+import org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
 import org.lwjgl.glfw.GLFW.GLFW_RESIZABLE
 import org.lwjgl.glfw.GLFW.GLFW_TRUE
@@ -33,10 +38,12 @@ import org.lwjgl.glfw.GLFW.glfwCreateWindow
 import org.lwjgl.glfw.GLFW.glfwDefaultWindowHints
 import org.lwjgl.glfw.GLFW.glfwDestroyWindow
 import org.lwjgl.glfw.GLFW.glfwGetKey
+import org.lwjgl.glfw.GLFW.glfwGetMouseButton
 import org.lwjgl.glfw.GLFW.glfwGetTime
 import org.lwjgl.glfw.GLFW.glfwInit
 import org.lwjgl.glfw.GLFW.glfwMakeContextCurrent
 import org.lwjgl.glfw.GLFW.glfwPollEvents
+import org.lwjgl.glfw.GLFW.glfwSetCursorPosCallback
 import org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose
 import org.lwjgl.glfw.GLFW.glfwShowWindow
 import org.lwjgl.glfw.GLFW.glfwSwapBuffers
@@ -63,6 +70,7 @@ import org.lwjgl.system.MemoryUtil
 object Game{
 
     private var window: Long = 0
+    private var currentMode = GameMode.PLAY
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
@@ -75,7 +83,8 @@ object Game{
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
 
-    private lateinit var camera: Camera
+    private lateinit var playerCamera: Camera
+    private lateinit var editCamera: FreeFlyCamera
     private lateinit var physicsEngine: PhysicsEngine
 
     private lateinit var player: Player
@@ -90,6 +99,12 @@ object Game{
     private val modelMatrix = Matrix4f()
     private var lastFrameTime = 0.0
     private var deltaTime = 0.0f
+
+    private var mouseDeltaX = 0.0f
+    private var mouseDeltaY = 0.0f
+    private var lastMouseX = 0.0
+    private var lastMouseY = 0.0
+    private var firstMouse = true
 
     @JvmStatic
     fun main(vararg args: String){
@@ -142,8 +157,24 @@ object Game{
         physicsEngine.addObjects(*gameObjects.toTypedArray())
         physicsEngine.addWorldObjects(ramp, ground)
 
-        camera = Camera(playerGameObject.transform, distance = 12.0f)
+        playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
+        editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
+
         setupMatrices()
+
+        glfwSetCursorPosCallback(window) {
+            _, xpos, ypos ->
+                if (firstMouse){
+                    lastMouseX = xpos
+                    lastMouseY = ypos
+                    firstMouse = false
+                }
+                mouseDeltaX = (xpos - lastMouseX).toFloat()
+                mouseDeltaY = (lastMouseY - ypos).toFloat()
+                lastMouseX = xpos
+                lastMouseY = ypos
+        }
+
         lastFrameTime = glfwGetTime()
     }
 
@@ -164,12 +195,15 @@ object Game{
             physicsEngine.update(deltaTime)
 
             when(player.gameObject.physicsBody?.isRespawning){
-                true -> {camera.reset()}
-                false, null -> {camera.update(deltaTime)}
+                true -> {playerCamera.reset()}
+                false, null -> {playerCamera.update(deltaTime)}
             }
 
             renderScene()
             renderDebugVisuals()
+
+            mouseDeltaX = 0.0f
+            mouseDeltaY = 0.0f
 
             glfwPollEvents()
             glfwSwapBuffers(window)
@@ -221,7 +255,12 @@ object Game{
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
         shaderProgram.bind()
 
-        val viewMatrix = camera.getViewMatrix()
+        var viewMatrix = Matrix4f()
+        when(currentMode){
+            GameMode.PLAY -> {viewMatrix = playerCamera.getViewMatrix()}
+            GameMode.EDITOR -> {viewMatrix = editCamera.getViewMatrix()}
+        }
+
 
         shaderProgram.setUniform("projection", projectionMatrix)
         shaderProgram.setUniform("view", viewMatrix)
@@ -247,7 +286,11 @@ object Game{
 
         debugShaderProgram.bind()
 
-        val viewMatrix = camera.getViewMatrix()
+        var viewMatrix = Matrix4f()
+        when(currentMode){
+            GameMode.PLAY -> {viewMatrix = playerCamera.getViewMatrix()}
+            GameMode.EDITOR -> {viewMatrix = editCamera.getViewMatrix()}
+        }
 
         debugShaderProgram.setUniform("projection", projectionMatrix)
         debugShaderProgram.setUniform("view", viewMatrix)
@@ -291,14 +334,37 @@ object Game{
     }
 
     private fun handleInput(){
-        val playerInput = PlayerInput(
-            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
-            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
-            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
-            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
-            glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
-        )
-        player.update(deltaTime, playerInput)
+        when(currentMode){
+            GameMode.PLAY -> {
+                val playerInput = PlayerInput(
+                    glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
+                )
+                player.update(deltaTime, playerInput)
+                if(glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+                    currentMode = GameMode.EDITOR
+                }
+            }
+            GameMode.EDITOR -> {
+                val isDragging = glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
+                val cameraInput = CameraInput(
+                    glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+                    glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+                    mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
+                    mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
+                )
+                editCamera.update(deltaTime, cameraInput)
+                if(glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+                    currentMode = GameMode.PLAY
+                }
+            }
+        }
+
     }
 
     private fun setupMatrices(){
