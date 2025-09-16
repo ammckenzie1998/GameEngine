@@ -26,10 +26,6 @@ class Vehicle (val gameObject: GameObject) {
         vehicleCommands: VehicleCommands
     ) {
         val body = gameObject.physicsBody ?: return
-        if (wasAirborne && body.isGrounded) {
-            val yRotation = gameObject.transform.orientation.getEulerAnglesXYZ(Vector3f()).y
-            gameObject.transform.orientation.identity().rotateY(yRotation)
-        }
         when (body.isGrounded) {
             true -> {
                 groundControl(deltaTime, vehicleCommands)
