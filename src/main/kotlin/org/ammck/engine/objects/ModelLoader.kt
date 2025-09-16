@@ -5,6 +5,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.ammck.engine.render.Mesh
 import org.ammck.util.FileUtil
+import org.ammck.util.MathUtil
 
 @Serializable
 private data class PolygonData(
@@ -17,6 +18,7 @@ private data class PolygonData(
 @Serializable
 private data class ModelData(
     val name: String,
+    val scale: Float = 0.01f,
     val polygons: List<PolygonData>
 )
 
@@ -44,13 +46,13 @@ object ModelLoader {
                 val v3 = polygon.vertices[i+1]
                 val t3 = polygon.texCoords?.get(i+1) ?: listOf(0.0f, 0.0f)
 
-                vertexList.addAll(v1)
+                vertexList.addAll(MathUtil.scaleFloats(modelData.scale,v1))
                 vertexList.addAll(colorData)
                 vertexList.addAll(t1)
-                vertexList.addAll(v2)
+                vertexList.addAll(MathUtil.scaleFloats(modelData.scale,v2))
                 vertexList.addAll(colorData)
                 vertexList.addAll(t2)
-                vertexList.addAll(v3)
+                vertexList.addAll(MathUtil.scaleFloats(modelData.scale,v3))
                 vertexList.addAll(colorData)
                 vertexList.addAll(t3)
             }
