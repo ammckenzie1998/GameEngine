@@ -74,6 +74,8 @@ object Game{
 
     private var window: Long = 0
     private var currentMode = GameMode.PLAY
+    private var framesTilNextModeSwitch = 0
+    private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
@@ -240,11 +242,18 @@ object Game{
                 gameObject.update()
             }
 
-            physicsEngine.update(deltaTime)
+            if(currentMode == GameMode.PLAY) {
+                physicsEngine.update(deltaTime)
 
-            when(player.gameObject.physicsBody?.isRespawning){
-                true -> {playerCamera.reset()}
-                false, null -> {playerCamera.update(deltaTime, player.gameObject.physicsBody!!.isGrounded)}
+                when (player.gameObject.physicsBody?.isRespawning) {
+                    true -> {
+                        playerCamera.reset()
+                    }
+
+                    false, null -> {
+                        playerCamera.update(deltaTime, player.gameObject.physicsBody!!.isGrounded)
+                    }
+                }
             }
 
             renderScene()
@@ -393,8 +402,9 @@ object Game{
                     glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
                 )
                 player.update(deltaTime, playerInput)
-                if(glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+                if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
                     currentMode = GameMode.EDITOR
+                    framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
                 }
             }
             GameMode.EDITOR -> {
@@ -410,12 +420,13 @@ object Game{
                     mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
                 )
                 editCamera.update(deltaTime, cameraInput)
-                if(glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+                if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
                     currentMode = GameMode.PLAY
+                    framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
                 }
             }
         }
-
+        if (framesTilNextModeSwitch > 0) framesTilNextModeSwitch--
     }
 
     private fun setupMatrices(){
