@@ -190,10 +190,8 @@ object Game{
             lastFrameTime = currentFrameTime
 
             if(currentMode == GameMode.EDITOR){
-                println("Editor mode")
                 val reloadMeshPaths = AssetManager.update()
                 if(reloadMeshPaths.isNotEmpty()){
-                    println("not empty")
                     for(gameObject in gameObjects){
                         gameObject.updateMesh(reloadMeshPaths)
                     }

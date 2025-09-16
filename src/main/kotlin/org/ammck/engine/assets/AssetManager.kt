@@ -26,7 +26,6 @@ object AssetManager {
         val reloadPaths = mutableListOf<String>()
         for((path, asset) in meshCache){
             if(asset.hasBeenModified()){
-                println("Last modified changed!")
                 asset.data.cleanup()
                 val newMesh = ModelLoader.load(path)
                 asset.data = newMesh
