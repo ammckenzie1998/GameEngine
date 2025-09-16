@@ -69,10 +69,10 @@ class Vehicle (val gameObject: GameObject) {
     private fun aerialControl(deltaTime: Float, commands: VehicleCommands){
         val transform = gameObject.transform
         if(commands.pitchMode){
-            transform.orientation.rotateLocalX(commands.throttle * AERIAL_ROTATION_SPEED * deltaTime)
-            transform.orientation.rotateLocalZ(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
+            transform.orientation.rotateX(commands.throttle * AERIAL_ROTATION_SPEED * deltaTime)
+            transform.orientation.rotateZ(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
         } else{
-            transform.orientation.rotateLocalY(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
+            transform.orientation.rotateY(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
         }
     }
 
@@ -88,7 +88,7 @@ class Vehicle (val gameObject: GameObject) {
         val rotationDelta = (distanceTraveled / WHEEL_RADIUS) * rotationDirection
 
         for(wheel in gameObject.children){
-            wheel.transform.orientation.rotateLocalX(rotationDelta)
+            wheel.transform.orientation.rotateX(rotationDelta)
         }
     }
 
