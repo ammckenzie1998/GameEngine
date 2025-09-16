@@ -93,12 +93,13 @@ object Game{
     private val gameObjects = mutableListOf<GameObject>()
     private lateinit var wheelMesh: Mesh
     private lateinit var cubeMesh: Mesh
+    private lateinit var roadStraightMesh: Mesh
+    private lateinit var roadCurveMesh: Mesh
 
     private lateinit var groundTexture: Texture
     private lateinit var defaultTexture: Texture
 
     private val projectionMatrix = Matrix4f()
-    private val modelMatrix = Matrix4f()
     private var lastFrameTime = 0.0
     private var deltaTime = 0.0f
 
@@ -127,6 +128,9 @@ object Game{
         val groundMesh = defineGround()
         cubeMesh = AssetManager.getMesh("models/cube.ammodel")
         val rampMesh = AssetManager.getMesh("models/ramp.ammodel")
+        val bigRampMesh = AssetManager.getMesh("models/big_ramp.ammodel")
+        roadStraightMesh = AssetManager.getMesh("models/road_straight.ammodel")
+        roadCurveMesh = AssetManager.getMesh("models/road_curve.ammodel")
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
@@ -151,13 +155,46 @@ object Game{
         val ramp = createGameObject(
             rampMesh,
             isStatic = true,
-            position = Vector3f(0f, -0.5f, -30f),
+            position = Vector3f(0f, 0f, -30f),
             boundingBoxSize=Vector3f(0f, 0f, 0f)
         )
+
+        val ramp2 = createGameObject(
+            bigRampMesh,
+            isStatic = true,
+            position = Vector3f(-16f*9f, 0f, -30f),
+            boundingBoxSize = Vector3f(0f, 0f, 0f)
+        )
+
+        val startingStraight = WorldFactory.createStraightRoad(
+            Vector3f(0f, 0.01f, 8f*16f),
+            0.0,
+            16
+        )
+        val straightTwo = WorldFactory.createStraightRoad(
+            Vector3f(-16f, 0.01f, -8f*16f),
+            90.0,
+            8
+        )
+        val straightThree = WorldFactory.createStraightRoad(
+            Vector3f(-16f*9f, 0.01f, 8f*16f),
+            0.0,
+            16
+        )
+        val straightFour = WorldFactory.createStraightRoad(
+            Vector3f(-16f, 0.01f, 9f*16f),
+            90.0,
+            8
+        )
+        gameObjects.addAll(startingStraight)
+        gameObjects.addAll(straightTwo)
+        gameObjects.addAll(straightThree)
+        gameObjects.addAll(straightFour)
+
         ramp.transform.orientation.rotateY(Math.toRadians(180.0).toFloat())
 
         physicsEngine.addObjects(*gameObjects.toTypedArray())
-        physicsEngine.addWorldObjects(ramp, ground)
+        physicsEngine.addWorldObjects(ramp, ground, ramp2)
 
         playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
         editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
@@ -181,7 +218,7 @@ object Game{
     }
 
     private fun loop(){
-        glClearColor(0.992f, 0.369f, 0.325f, 0.0f)
+        glClearColor(0.5f, 0.5f, 0.9f, 0.0f)
 
         while(!glfwWindowShouldClose(window)){
             val currentFrameTime = glfwGetTime()
@@ -211,7 +248,7 @@ object Game{
             }
 
             renderScene()
-            renderDebugVisuals()
+//            renderDebugVisuals()
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
@@ -383,7 +420,7 @@ object Game{
 
     private fun setupMatrices(){
         val aspectRatio = INITIAL_WINDOW_WIDTH.toFloat() / INITIAL_WINDOW_HEIGHT.toFloat()
-        projectionMatrix.perspective(Math.toRadians(45.0).toFloat(), aspectRatio, 0.1f, 100.0f)
+        projectionMatrix.perspective(Math.toRadians(45.0).toFloat(), aspectRatio, 0.1f, 1000.0f)
     }
 
     private fun createGameObject (
@@ -403,13 +440,13 @@ object Game{
     private fun defineGround(): Mesh{
         val groundVertices = floatArrayOf(
             // Positions          // Colors (tint)     // Texture Coords (UVs)
-            -50.0f, -0.75f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,
-            50.0f, -0.75f, -500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,
-            50.0f, -0.75f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
+            -500.0f, 0f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,
+            500.0f, 0f, -500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,
+            500.0f, 0f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
 
-            50.0f, -0.75f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
-            -50.0f, -0.75f,  500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-            -50.0f, -0.75f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
+            500.0f, 0f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
+            -500.0f, 0f,  500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+            -500.0f, 0f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
         )
         return Mesh(null, groundVertices)
     }

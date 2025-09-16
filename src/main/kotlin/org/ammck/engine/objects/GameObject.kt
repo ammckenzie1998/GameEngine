@@ -11,7 +11,7 @@ class GameObject(
     val id: String,
     val transform: Transform,
     var mesh: Mesh,
-    val physicsBody: PhysicsBody?,
+    val physicsBody: PhysicsBody? = null,
     val suspension: Suspension? = null
 ){
     var parent: GameObject? = null

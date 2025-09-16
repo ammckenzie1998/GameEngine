@@ -16,10 +16,10 @@ object CarFactory {
         val playerBoundingBox = AxisAlignedBoundingBox(initialTransform.position, Vector3f(2.0f, 1.0f, 1.0f))
         val playerBody = PhysicsBody(playerBoundingBox)
 
-        val flWheel = createWheelObject(Vector3f(-0.8f,-0.2f,2f), wheelMesh)
-        val frWheel = createWheelObject(Vector3f(0.8f,-0.2f,2f), wheelMesh)
-        val rlWheel = createWheelObject(Vector3f(-0.8f,-0.2f,-2f), wheelMesh)
-        val rrWheel = createWheelObject(Vector3f(0.8f,-0.2f,-2f), wheelMesh)
+        val flWheel = createWheelObject(Vector3f(-0.8f,-0.2f,1.5f), wheelMesh)
+        val frWheel = createWheelObject(Vector3f(0.8f,-0.2f,1.5f), wheelMesh)
+        val rlWheel = createWheelObject(Vector3f(-0.8f,-0.2f,-1.5f), wheelMesh)
+        val rrWheel = createWheelObject(Vector3f(0.8f,-0.2f,-1.5f), wheelMesh)
 
         val suspension = Suspension(
             wheelPositions = listOf(

@@ -1,0 +1,16 @@
+{
+  "name": "Road Straight",
+  "scale": "0.01f",
+  "polygons": [
+    {
+      "description": "Main piece",
+      "color": [80, 80, 80],
+      "vertices": [
+        [-800, 0, 800],
+        [800, 0, 800],
+        [800, 0, -800],
+        [-800, 0, -800]
+      ]
+    }
+  ]
+}
