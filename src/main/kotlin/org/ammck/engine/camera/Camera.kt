@@ -2,6 +2,7 @@ package org.ammck.engine.camera
 
 import org.ammck.engine.Transform
 import org.joml.Matrix4f
+import org.joml.Quaternionf
 import org.joml.Vector3f
 
 class Camera (
@@ -16,14 +17,18 @@ class Camera (
     private val upDirection = Vector3f(0.0f, 1.0f, 0.0f)
     private val desiredPosition = Vector3f()
 
-    fun update(deltaTime: Float){
-        calculateDesiredPosition()
+    private var targetOrientation = Quaternionf()
+
+    fun update(deltaTime: Float, isTargetGrounded: Boolean){
+        calculateDesiredPosition(isTargetGrounded)
         position.lerp(desiredPosition, smoothFactor * deltaTime)
     }
 
-    private fun calculateDesiredPosition(){
+    private fun calculateDesiredPosition(isTargetGounded: Boolean){
         val targetPosition = targetTransform.position
-        val targetOrientation = targetTransform.orientation
+        if(isTargetGounded){
+            targetOrientation.set(targetTransform.orientation)
+        }
         val forwardDirection = Vector3f(0f, 0f, -1f).rotate(targetOrientation)
 
         desiredPosition.set(targetPosition)
@@ -32,7 +37,7 @@ class Camera (
     }
 
     fun reset(){
-        calculateDesiredPosition()
+        calculateDesiredPosition(true)
         position.set(desiredPosition)
     }
 

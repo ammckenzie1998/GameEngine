@@ -244,7 +244,7 @@ object Game{
 
             when(player.gameObject.physicsBody?.isRespawning){
                 true -> {playerCamera.reset()}
-                false, null -> {playerCamera.update(deltaTime)}
+                false, null -> {playerCamera.update(deltaTime, player.gameObject.physicsBody!!.isGrounded)}
             }
 
             renderScene()
