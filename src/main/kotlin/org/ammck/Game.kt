@@ -6,6 +6,7 @@ import org.ammck.engine.objects.GameObject
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
+import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
 import org.ammck.engine.objects.ModelLoader
@@ -78,7 +79,6 @@ object Game{
     private const val WINDOW_TITLE = "Game Engine"
 
     private const val MAX_DELTA_TIME = 0.1f
-
     private const val RESPAWN_Y_THRESHOLD = -20f
     private val SPAWN_POINT = Vector3f(0f, 10f, 0f)
 
@@ -122,11 +122,11 @@ object Game{
 
         physicsEngine = PhysicsEngine()
 
-        wheelMesh = ModelLoader.load("models/wheel.ammodel")
-        val chassisMesh = ModelLoader.load("models/car.ammodel")
+        wheelMesh = AssetManager.getMesh("models/wheel.ammodel")
+        val chassisMesh = AssetManager.getMesh("models/car.ammodel")
         val groundMesh = defineGround()
-        cubeMesh = ModelLoader.load("models/cube.ammodel")
-        val rampMesh = ModelLoader.load("models/ramp.ammodel")
+        cubeMesh = AssetManager.getMesh("models/cube.ammodel")
+        val rampMesh = AssetManager.getMesh("models/ramp.ammodel")
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
@@ -189,6 +189,17 @@ object Game{
             deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
             lastFrameTime = currentFrameTime
 
+            if(currentMode == GameMode.EDITOR){
+                println("Editor mode")
+                val reloadMeshPaths = AssetManager.update()
+                if(reloadMeshPaths.isNotEmpty()){
+                    println("not empty")
+                    for(gameObject in gameObjects){
+                        gameObject.updateMesh(reloadMeshPaths)
+                    }
+                }
+            }
+
             handleInput()
             for(gameObject in gameObjects) {
                 gameObject.update()
@@ -218,8 +229,9 @@ object Game{
 
     private fun destroy(){
         shaderProgram.cleanup()
-        gameObjects.forEach { it.mesh.cleanup() }
+        AssetManager.cleanup()
         groundTexture.cleanup()
+        defaultTexture.cleanup()
 
         glfwDestroyWindow(window)
         glfwTerminate()
@@ -401,7 +413,7 @@ object Game{
             -50.0f, -0.75f,  500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
             -50.0f, -0.75f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
         )
-        return Mesh(groundVertices)
+        return Mesh(null, groundVertices)
     }
 
 }

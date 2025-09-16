@@ -1,6 +1,7 @@
 package org.ammck.engine.objects
 
 import org.ammck.engine.Transform
+import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
@@ -9,7 +10,7 @@ import org.joml.Matrix4f
 class GameObject(
     val id: String,
     val transform: Transform,
-    val mesh: Mesh,
+    var mesh: Mesh,
     val physicsBody: PhysicsBody?,
     val suspension: Suspension? = null
 ){
@@ -41,6 +42,17 @@ class GameObject(
 
         for(child in children){
             child.update()
+        }
+    }
+
+    fun updateMesh(reloadedPaths: List<String>){
+       mesh.resourcePath?.let { path ->
+            if(reloadedPaths.contains(path)){
+                this.mesh = AssetManager.getMesh(path)
+            }
+        }
+        for (child in children){
+            child.updateMesh(reloadedPaths)
         }
     }
 }

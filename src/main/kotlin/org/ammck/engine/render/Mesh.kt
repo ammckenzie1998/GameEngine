@@ -17,7 +17,7 @@ import org.lwjgl.opengl.GL30.glDeleteVertexArrays
 import org.lwjgl.opengl.GL30.glGenVertexArrays
 import javax.swing.text.Position
 
-class Mesh (val vertices: FloatArray) {
+class Mesh (val resourcePath: String?, val vertices: FloatArray) {
 
     private val vaoId: Int
     private val vboId: Int

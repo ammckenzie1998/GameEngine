@@ -55,6 +55,6 @@ object ModelLoader {
                 vertexList.addAll(t3)
             }
         }
-        return Mesh(vertexList.toFloatArray())
+        return Mesh(resourcePath, vertexList.toFloatArray())
     }
 }
