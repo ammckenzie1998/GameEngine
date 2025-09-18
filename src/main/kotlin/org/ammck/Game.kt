@@ -9,16 +9,14 @@ import org.ammck.engine.Transform
 import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
-import org.ammck.engine.objects.ModelLoader
 import org.ammck.game.Player
-import org.ammck.game.VehicleCommands
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.GameMode
 import org.ammck.game.PlayerInput
-import org.ammck.game.models.CarFactory
-import org.ammck.game.models.WorldFactory
+import org.ammck.game.factory.CarFactory
+import org.ammck.game.factory.WorldFactory
 import org.joml.Math.min
 import org.joml.Matrix4f
 import org.joml.Vector3f
@@ -169,24 +167,24 @@ object Game{
         )
 
         val startingStraight = WorldFactory.createStraightRoad(
-            Vector3f(0f, 0.01f, 8f*16f),
+            Vector3f(0f, 0.01f, 128f),
             0.0,
-            16
+            8
         )
         val straightTwo = WorldFactory.createStraightRoad(
-            Vector3f(-16f, 0.01f, -8f*16f),
+            Vector3f(-24f, 0.01f, -120f),
             90.0,
-            8
+            4
         )
         val straightThree = WorldFactory.createStraightRoad(
             Vector3f(-16f*9f, 0.01f, 8f*16f),
             0.0,
-            16
+            8
         )
         val straightFour = WorldFactory.createStraightRoad(
-            Vector3f(-16f, 0.01f, 9f*16f),
+            Vector3f(-24f, 0.01f, 152f),
             90.0,
-            8
+            4
         )
         gameObjects.addAll(startingStraight)
         gameObjects.addAll(straightTwo)
