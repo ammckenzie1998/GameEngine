@@ -56,7 +56,7 @@ class Vehicle (val gameObject: GameObject) {
 
         if(commands.throttle != 0.0f){
             val forward = Vector3f(0f, 0f, -1f).rotate(transform.orientation)
-            body.forces.add(forward.mul(body.accelerationFactor * -commands.throttle))
+            body.forces.add(forward.mul(body.accelerationFactor * commands.throttle))
         }
 
         if (body.velocity.x != 0.0f) body.velocity.x *= body.dragFactor
@@ -69,7 +69,7 @@ class Vehicle (val gameObject: GameObject) {
     private fun aerialControl(deltaTime: Float, commands: VehicleCommands){
         val transform = gameObject.transform
         if(commands.pitchMode){
-            transform.orientation.rotateX(commands.throttle * AERIAL_ROTATION_SPEED * deltaTime)
+            transform.orientation.rotateX(-commands.throttle * AERIAL_ROTATION_SPEED * deltaTime)
             transform.orientation.rotateZ(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
         } else{
             transform.orientation.rotateY(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
