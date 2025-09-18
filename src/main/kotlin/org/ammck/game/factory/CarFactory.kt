@@ -6,11 +6,12 @@ import org.ammck.engine.physics.AxisAlignedBoundingBox
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
+import org.ammck.game.Vehicle
 import org.joml.Vector3f
 
 object CarFactory {
 
-    fun createPlayerCar(initialTransform: Transform, chassisMesh: Mesh, wheelMesh: Mesh): GameObject{
+    fun createPlayerCar(initialTransform: Transform, chassisMesh: Mesh, wheelMesh: Mesh): Vehicle {
         val playerBoundingBox = AxisAlignedBoundingBox(initialTransform.position, Vector3f(2.0f, 1.0f, 1.0f))
         val playerBody = PhysicsBody(playerBoundingBox)
 
@@ -35,7 +36,7 @@ object CarFactory {
 
         playerGameObject.addChildren(frWheel, flWheel, rrWheel, rlWheel)
 
-        return playerGameObject
+        return Vehicle(playerGameObject)
     }
 
     private fun createWheelObject(localPosition: Vector3f, wheelMesh: Mesh): GameObject{

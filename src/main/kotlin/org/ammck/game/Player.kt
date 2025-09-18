@@ -2,9 +2,7 @@ package org.ammck.game
 
 import org.ammck.engine.objects.GameObject
 
-class Player (val gameObject: GameObject) {
-
-    private val vehicle = Vehicle(gameObject)
+class Player (val vehicle: Vehicle) {
 
     fun update(
         deltaTime: Float,

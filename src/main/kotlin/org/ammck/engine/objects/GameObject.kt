@@ -5,14 +5,17 @@ import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
+import org.ammck.games.Waypoint
 import org.joml.Matrix4f
+import org.joml.Vector3f
 
 class GameObject(
     val id: String,
     val transform: Transform,
     var mesh: Mesh,
     val physicsBody: PhysicsBody? = null,
-    val suspension: Suspension? = null
+    val suspension: Suspension? = null,
+    val waypoint: Waypoint? = null,
 ){
     var parent: GameObject? = null
     var children = mutableListOf<GameObject>()
@@ -54,5 +57,9 @@ class GameObject(
         for (child in children){
             child.updateMesh(reloadedPaths)
         }
+    }
+
+    fun getPosition(): Vector3f {
+        return this.transform.position
     }
 }

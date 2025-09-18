@@ -15,8 +15,11 @@ import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.GameMode
 import org.ammck.game.PlayerInput
+import org.ammck.game.RaceManager
+import org.ammck.game.WaypointType
 import org.ammck.game.factory.CarFactory
 import org.ammck.game.factory.WorldFactory
+import org.ammck.games.Waypoint
 import org.joml.Math.min
 import org.joml.Matrix4f
 import org.joml.Vector3f
@@ -67,6 +70,7 @@ import org.lwjgl.opengl.GL11.glEnable
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.system.MemoryUtil
+import javax.swing.text.Position
 
 object Game{
 
@@ -95,6 +99,8 @@ object Game{
     private lateinit var cubeMesh: Mesh
     private lateinit var roadStraightMesh: Mesh
     private lateinit var roadCurveMesh: Mesh
+
+    private lateinit var raceManager: RaceManager
 
     private lateinit var groundTexture: Texture
     private lateinit var defaultTexture: Texture
@@ -135,35 +141,40 @@ object Game{
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
 
-        val playerGameObject = CarFactory.createPlayerCar(
+        val playerVehicle = CarFactory.createPlayerCar(
             Transform(SPAWN_POINT), chassisMesh, wheelMesh)
-        player = Player(playerGameObject)
+        val playerGameObject = playerVehicle.gameObject
+        player = Player(playerVehicle)
         gameObjects.add(playerGameObject)
 
         val ground = createGameObject(
             groundMesh,
             isStatic = true,
             position=Vector3f(0f,0f,0f),
-            boundingBoxSize=Vector3f(0f, -10f, 0f))
+            boundingBoxSize=Vector3f(0f, -10f, 0f),
+            null)
 
         createGameObject(
             cubeMesh,
             isStatic = true,
             position=Vector3f(20f, 0f, 0f),
-            boundingBoxSize=Vector3f(1.0f, 1.0f, 1.0f))
+            boundingBoxSize=Vector3f(1.0f, 1.0f, 1.0f),
+            null)
 
         val ramp = createGameObject(
             rampMesh,
             isStatic = true,
             position = Vector3f(0f, 0f, -30f),
-            boundingBoxSize=Vector3f(0f, 0f, 0f)
+            boundingBoxSize=Vector3f(0f, 0f, 0f),
+            null
         )
 
         val ramp2 = createGameObject(
             bigRampMesh,
             isStatic = true,
-            position = Vector3f(-16f*9f, 0f, -30f),
-            boundingBoxSize = Vector3f(0f, 0f, 0f)
+            position = Vector3f(-144f, 0f, -30f),
+            boundingBoxSize = Vector3f(0f, 0f, 0f),
+            null
         )
 
         val startingStraight = WorldFactory.createStraightRoad(
@@ -177,7 +188,7 @@ object Game{
             4
         )
         val straightThree = WorldFactory.createStraightRoad(
-            Vector3f(-16f*9f, 0.01f, 8f*16f),
+            Vector3f(-144f, 0.01f, 8f*16f),
             0.0,
             8
         )
@@ -186,10 +197,25 @@ object Game{
             90.0,
             4
         )
+
+        val checkpoint1 = createCheckpoint(
+            index=0,
+            position=Vector3f(0f, 0f, -110f))
+
+        val checkpoint2 = createCheckpoint(
+            index=1,
+            position=Vector3f(-120f, 0f, -120f))
+
+        val checkpoint3 = createCheckpoint(
+            index=2,
+            position=Vector3f(-16f, 0f, 152f))
+
         gameObjects.addAll(startingStraight)
         gameObjects.addAll(straightTwo)
         gameObjects.addAll(straightThree)
         gameObjects.addAll(straightFour)
+
+        raceManager = RaceManager(listOf(playerVehicle), gameObjects)
 
         ramp.transform.orientation.rotateY(Math.toRadians(180.0).toFloat())
 
@@ -242,14 +268,14 @@ object Game{
 
             if(currentMode == GameMode.PLAY) {
                 physicsEngine.update(deltaTime)
-
-                when (player.gameObject.physicsBody?.isRespawning) {
+                raceManager.update()
+                when (player.vehicle.gameObject.physicsBody?.isRespawning) {
                     true -> {
                         playerCamera.reset()
                     }
 
                     false, null -> {
-                        playerCamera.update(deltaTime, player.gameObject.physicsBody!!.isGrounded)
+                        playerCamera.update(deltaTime, player.vehicle.gameObject.physicsBody!!.isGrounded)
                     }
                 }
             }
@@ -437,13 +463,25 @@ object Game{
         isStatic: Boolean,
         position: Vector3f,
         boundingBoxSize: Vector3f,
+        waypoint: Waypoint?
     ): GameObject{
         val objectTransform = Transform(position)
         val objectBoundingBox = AxisAlignedBoundingBox(position, boundingBoxSize)
         val objectBody = PhysicsBody(objectBoundingBox, isStatic)
-        val gameObject = GameObject("Object", objectTransform, mesh, objectBody)
+        val gameObject = GameObject("Object", objectTransform, mesh, objectBody, waypoint=waypoint)
         gameObjects.add(gameObject)
         return gameObject
+    }
+
+    private fun createCheckpoint(index: Int, position: Vector3f): GameObject{
+        val checkpoint = Waypoint(WaypointType.RACE_CHECKPOINT, index)
+        val result =  createGameObject(
+            cubeMesh,
+            isStatic = true,
+            position=position,
+            boundingBoxSize=Vector3f(0.0f, 0.0f, 0.0f),
+            waypoint=checkpoint)
+        return result
     }
 
     private fun defineGround(): Mesh{
