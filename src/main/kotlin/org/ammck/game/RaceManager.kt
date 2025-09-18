@@ -28,7 +28,7 @@ class RaceManager(
                 val targetCheckpoint = checkpoints[nextCheckpointIndex]
                 val distanceToCheckpoint = racer.gameObject.getPosition().distance(targetCheckpoint.getPosition())
                 println(distanceToCheckpoint)
-                val checkpointRadius = 2f
+                val checkpointRadius = 8f
 
                 if (distanceToCheckpoint < checkpointRadius){
                     println("Checkpoint $nextCheckpointIndex passed!")
@@ -41,5 +41,10 @@ class RaceManager(
                 }
             }
         }
+    }
+
+    fun getRacerTarget(vehicle: Vehicle): GameObject?{
+        val nextCheckpoint = racerProgress[vehicle] ?: return null
+        return checkpoints[nextCheckpoint]
     }
 }

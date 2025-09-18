@@ -13,6 +13,7 @@ import org.ammck.game.Player
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
+import org.ammck.game.AIController
 import org.ammck.game.GameMode
 import org.ammck.game.PlayerInput
 import org.ammck.game.RaceManager
@@ -84,7 +85,7 @@ object Game{
 
     private const val MAX_DELTA_TIME = 0.1f
     private const val RESPAWN_Y_THRESHOLD = -20f
-    private val SPAWN_POINT = Vector3f(0f, 10f, 0f)
+    private val SPAWN_POINT = Vector3f(0f, 1f, 0f)
 
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
@@ -94,11 +95,15 @@ object Game{
     private lateinit var physicsEngine: PhysicsEngine
 
     private lateinit var player: Player
+    private lateinit var aiObject: GameObject
     private val gameObjects = mutableListOf<GameObject>()
+    private val aiControllers = mutableListOf<AIController>()
+
     private lateinit var wheelMesh: Mesh
     private lateinit var cubeMesh: Mesh
     private lateinit var roadStraightMesh: Mesh
     private lateinit var roadCurveMesh: Mesh
+    private lateinit var checkpointMesh: Mesh
 
     private lateinit var raceManager: RaceManager
 
@@ -137,6 +142,7 @@ object Game{
         val bigRampMesh = AssetManager.getMesh("models/big_ramp.ammodel")
         roadStraightMesh = AssetManager.getMesh("models/road_straight.ammodel")
         roadCurveMesh = AssetManager.getMesh("models/road_curve.ammodel")
+        checkpointMesh = AssetManager.getMesh("models/checkpoint.ammodel")
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
@@ -144,6 +150,12 @@ object Game{
         val playerVehicle = CarFactory.createPlayerCar(
             Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
+
+        val aiStartTransform = Transform(position = Vector3f(5f, 1f, 0f))
+        val aiVehicle = CarFactory.createPlayerCar(aiStartTransform, chassisMesh, wheelMesh)
+        aiObject = aiVehicle.gameObject
+        gameObjects.add(aiObject)
+
         player = Player(playerVehicle)
         gameObjects.add(playerGameObject)
 
@@ -205,24 +217,28 @@ object Game{
         val checkpoint2 = createCheckpoint(
             index=1,
             position=Vector3f(-120f, 0f, -120f))
+        checkpoint2.transform.orientation.rotateY(Math.toRadians(90.0).toFloat())
 
         val checkpoint3 = createCheckpoint(
             index=2,
             position=Vector3f(-16f, 0f, 152f))
+        checkpoint3.transform.orientation.rotateY(Math.toRadians(270.0).toFloat())
 
         gameObjects.addAll(startingStraight)
         gameObjects.addAll(straightTwo)
         gameObjects.addAll(straightThree)
         gameObjects.addAll(straightFour)
 
-        raceManager = RaceManager(listOf(playerVehicle), gameObjects)
+        raceManager = RaceManager(listOf(playerVehicle, aiVehicle), gameObjects)
+        val aiController = AIController(aiVehicle, raceManager)
+        aiControllers.add(aiController)
 
         ramp.transform.orientation.rotateY(Math.toRadians(180.0).toFloat())
 
         physicsEngine.addObjects(*gameObjects.toTypedArray())
         physicsEngine.addWorldObjects(ramp, ground, ramp2)
 
-        playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
+        playerCamera = Camera(aiObject.transform, distance = 12.0f)
         editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
 
         setupMatrices()
@@ -267,15 +283,19 @@ object Game{
             }
 
             if(currentMode == GameMode.PLAY) {
+                for(ai in aiControllers){
+                    ai.update(deltaTime)
+                }
+
                 physicsEngine.update(deltaTime)
                 raceManager.update()
-                when (player.vehicle.gameObject.physicsBody?.isRespawning) {
+                when (aiObject.physicsBody?.isRespawning) {
                     true -> {
                         playerCamera.reset()
                     }
 
                     false, null -> {
-                        playerCamera.update(deltaTime, player.vehicle.gameObject.physicsBody!!.isGrounded)
+                        playerCamera.update(deltaTime, aiObject.physicsBody!!.isGrounded)
                     }
                 }
             }
@@ -476,7 +496,7 @@ object Game{
     private fun createCheckpoint(index: Int, position: Vector3f): GameObject{
         val checkpoint = Waypoint(WaypointType.RACE_CHECKPOINT, index)
         val result =  createGameObject(
-            cubeMesh,
+            checkpointMesh,
             isStatic = true,
             position=position,
             boundingBoxSize=Vector3f(0.0f, 0.0f, 0.0f),
