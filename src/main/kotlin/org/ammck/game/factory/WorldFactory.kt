@@ -1,17 +1,14 @@
-package org.ammck.game.models
+package org.ammck.game.factory
 
 import org.ammck.engine.Transform
 import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.objects.GameObject
-import org.ammck.engine.objects.ModelLoader
-import org.ammck.engine.physics.AxisAlignedBoundingBox
-import org.ammck.engine.physics.PhysicsBody
 import org.joml.Quaternionf
 import org.joml.Vector3f
 
 object WorldFactory {
 
-    private const val TILE_LENGTH = 16.0f
+    private const val TILE_LENGTH = 32.0f
 
     fun createStraightRoad(
         startingPosition: Vector3f,

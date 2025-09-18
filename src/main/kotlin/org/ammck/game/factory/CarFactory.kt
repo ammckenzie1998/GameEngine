@@ -1,9 +1,7 @@
-package org.ammck.game.models
+package org.ammck.game.factory
 
-import org.ammck.Game
 import org.ammck.engine.Transform
 import org.ammck.engine.objects.GameObject
-import org.ammck.engine.objects.ModelLoader
 import org.ammck.engine.physics.AxisAlignedBoundingBox
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
