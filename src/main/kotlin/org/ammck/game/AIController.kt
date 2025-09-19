@@ -24,9 +24,9 @@ class AIController(
             val rightVector = Vector3f(1f, 0f, 0f).rotate(transform.orientation)
             val dotProduct = rightVector.dot(directionToTarget)
 
-            if(dotProduct > 0.15f){
+            if(dotProduct > 0.03f){
                 steerDirection = 1.0f
-            } else if(dotProduct < 0.15f){
+            } else if(dotProduct < 0.03f){
                 steerDirection = -1.0f
             } else{
                 steerDirection = 0.0f
