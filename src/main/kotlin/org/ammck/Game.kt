@@ -18,7 +18,7 @@ import org.ammck.game.GameMode
 import org.ammck.game.PlayerInput
 import org.ammck.game.RaceManager
 import org.ammck.game.WaypointType
-import org.ammck.game.factory.CarFactory
+import org.ammck.game.factory.VehicleFactory
 import org.ammck.game.factory.WorldFactory
 import org.ammck.games.Waypoint
 import org.joml.Math.min
@@ -147,12 +147,12 @@ object Game{
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
 
-        val playerVehicle = CarFactory.createPlayerCar(
+        val playerVehicle = VehicleFactory.createVehicle(
             Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
 
         val aiStartTransform = Transform(position = Vector3f(5f, 1f, 0f))
-        val aiVehicle = CarFactory.createPlayerCar(aiStartTransform, chassisMesh, wheelMesh)
+        val aiVehicle = VehicleFactory.createVehicle(aiStartTransform, chassisMesh, wheelMesh)
         aiObject = aiVehicle.gameObject
         gameObjects.add(aiObject)
 
@@ -238,7 +238,7 @@ object Game{
         physicsEngine.addObjects(*gameObjects.toTypedArray())
         physicsEngine.addWorldObjects(ramp, ground, ramp2)
 
-        playerCamera = Camera(aiObject.transform, distance = 12.0f)
+        playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
         editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
 
         setupMatrices()
@@ -289,19 +289,19 @@ object Game{
 
                 physicsEngine.update(deltaTime)
                 raceManager.update()
-                when (aiObject.physicsBody?.isRespawning) {
+                when (player.vehicle.gameObject.physicsBody?.isRespawning) {
                     true -> {
                         playerCamera.reset()
                     }
 
                     false, null -> {
-                        playerCamera.update(deltaTime, aiObject.physicsBody!!.isGrounded)
+                        playerCamera.update(deltaTime, player.vehicle.gameObject.physicsBody!!.isGrounded)
                     }
                 }
             }
 
             renderScene()
-//            renderDebugVisuals()
+            renderDebugVisuals()
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
@@ -392,6 +392,21 @@ object Game{
         when(currentMode){
             GameMode.PLAY -> {viewMatrix = playerCamera.getViewMatrix()}
             GameMode.EDITOR -> {viewMatrix = editCamera.getViewMatrix()}
+        }
+
+        debugShaderProgram.setUniform("projection", projectionMatrix)
+        debugShaderProgram.setUniform("view", viewMatrix)
+        for(debugObject in gameObjects){
+            debugObject.physicsBody?.let{ body ->
+                val hitbox = body.boundingBox
+
+                val debugModelMatrix = Matrix4f()
+                    .translate(hitbox.center)
+                    .scale(hitbox.size)
+                debugShaderProgram.setUniform("debugColor", Vector3f(1f, 1f, 0f))
+                debugShaderProgram.setUniform("model", debugModelMatrix)
+                cubeMesh.draw()
+            }
         }
 
         debugShaderProgram.setUniform("projection", projectionMatrix)
