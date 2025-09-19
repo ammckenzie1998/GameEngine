@@ -1,10 +1,9 @@
 package org.ammck.engine.physics
 
-import org.ammck.engine.Transform
 import org.joml.Vector3f
 
 class PhysicsBody(
-    val boundingBox: AxisAlignedBoundingBox,
+    val boundingBox: OrientedBoundingBox,
     val isStatic: Boolean = false,
     val turnSpeed: Float = 2.5f,
     val accelerationFactor: Float = 100f,

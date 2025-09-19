@@ -2,7 +2,7 @@ package org.ammck.game.factory
 
 import org.ammck.engine.Transform
 import org.ammck.engine.objects.GameObject
-import org.ammck.engine.physics.AxisAlignedBoundingBox
+import org.ammck.engine.physics.OrientedBoundingBox
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
@@ -12,7 +12,7 @@ import org.joml.Vector3f
 object VehicleFactory {
 
     fun createVehicle(initialTransform: Transform, chassisMesh: Mesh, wheelMesh: Mesh): Vehicle {
-        val boundingBox = AxisAlignedBoundingBox(initialTransform.position, Vector3f(2.0f, 1.0f, 1.0f))
+        val boundingBox = OrientedBoundingBox(initialTransform, Vector3f(2.0f, 1.5f, 4.0f))
         val body = PhysicsBody(boundingBox)
 
         val flWheel = createWheelObject(Vector3f(-0.8f,-0.2f,1.5f), wheelMesh)
@@ -41,7 +41,7 @@ object VehicleFactory {
 
     private fun createWheelObject(localPosition: Vector3f, wheelMesh: Mesh): GameObject{
         val transform = Transform(position = localPosition, scale = Vector3f(0.1f, 0.1f, 0.1f))
-        val dummyBoundingBox = AxisAlignedBoundingBox(transform.position, Vector3f())
+        val dummyBoundingBox = OrientedBoundingBox(transform, Vector3f())
         val dummyBody = PhysicsBody(dummyBoundingBox, isStatic = true)
         return GameObject("Wheel", transform, wheelMesh, dummyBody)
     }

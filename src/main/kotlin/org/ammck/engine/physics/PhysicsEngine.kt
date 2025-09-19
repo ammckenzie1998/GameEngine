@@ -48,7 +48,6 @@ class PhysicsEngine {
 
         //2. Motion
         for (obj in physicsObjects){
-//            if(obj.id == "Player") println(obj.physicsBody!!.isGrounded)
             val body = obj.physicsBody ?: continue
             if(!body.isStatic){
                 obj.transform.position.add(Vector3f(body.velocity).mul(deltaTime))
@@ -68,8 +67,8 @@ class PhysicsEngine {
 
                 if (bodyA.isStatic && bodyB.isStatic) continue
 
-                bodyA.boundingBox.center.set(objA.transform.position)
-                bodyB.boundingBox.center.set(objB.transform.position)
+                bodyA.boundingBox.transform.position.set(objA.transform.position)
+                bodyB.boundingBox.transform.position.set(objB.transform.position)
 
                 val mtv = bodyA.boundingBox.getCollisionResponse(bodyB.boundingBox)
                 if (mtv != null) {
@@ -100,22 +99,10 @@ class PhysicsEngine {
         val bodyB = collision.secondObject.physicsBody!!
         val normal = collision.normal
 
-
-        if(bodyA.isRamp && !bodyB.isStatic){
-            bodyB.isOnRamp = true
-            return
-        }
-        if(bodyB.isRamp && !bodyA.isStatic){
-            bodyA.isOnRamp = true
-            return
-        }
-
-        // --- 1. Calculate Relative Velocity ---
         val relativeVelocity = Vector3f(bodyB.velocity).sub(bodyA.velocity)
         val velocityAlongNormal = relativeVelocity.dot(normal)
         if (velocityAlongNormal > 0) return
 
-        // --- 2. Calculate and Apply Impulse (Velocity Correction) ---
         val e = 0.0f // Bounciness
         var j = -(1 + e) * velocityAlongNormal
         j /= (bodyA.inverseMass + bodyB.inverseMass)
@@ -123,10 +110,8 @@ class PhysicsEngine {
         if (!bodyA.isStatic) bodyA.velocity.sub(Vector3f(impulse).mul(bodyA.inverseMass))
         if (!bodyB.isStatic) bodyB.velocity.add(Vector3f(impulse).mul(bodyB.inverseMass))
 
-        // --- 3. Positional Correction (The Jitter and Floating Fix) ---
-        // We apply the push-out directly, scaled by inverse mass. No percentages.
         val totalInverseMass = bodyA.inverseMass + bodyB.inverseMass
-        if (totalInverseMass <= 0) return // Both objects are static/immovable
+        if (totalInverseMass <= 0) return
 
         val correction = Vector3f(normal).mul(collision.penetration / totalInverseMass)
         if (!bodyA.isStatic) {

@@ -10,10 +10,10 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 
 class GameObject(
-    val id: String,
+    var id: String,
     val transform: Transform,
     var mesh: Mesh,
-    val physicsBody: PhysicsBody? = null,
+    var physicsBody: PhysicsBody? = null,
     val suspension: Suspension? = null,
     val waypoint: Waypoint? = null,
 ){

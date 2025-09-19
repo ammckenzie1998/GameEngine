@@ -1,6 +1,6 @@
 package org.ammck
 
-import org.ammck.engine.physics.AxisAlignedBoundingBox
+import org.ammck.engine.physics.OrientedBoundingBox
 import org.ammck.engine.camera.Camera
 import org.ammck.engine.objects.GameObject
 import org.ammck.engine.physics.PhysicsBody
@@ -71,7 +71,6 @@ import org.lwjgl.opengl.GL11.glEnable
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.system.MemoryUtil
-import javax.swing.text.Position
 
 object Game{
 
@@ -150,6 +149,7 @@ object Game{
         val playerVehicle = VehicleFactory.createVehicle(
             Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
+        playerGameObject.id = "Player"
 
         val aiStartTransform = Transform(position = Vector3f(5f, 1f, 0f))
         val aiVehicle = VehicleFactory.createVehicle(aiStartTransform, chassisMesh, wheelMesh)
@@ -160,13 +160,15 @@ object Game{
         gameObjects.add(playerGameObject)
 
         val ground = createGameObject(
+            "Ground",
             groundMesh,
             isStatic = true,
             position=Vector3f(0f,0f,0f),
-            boundingBoxSize=Vector3f(0f, -10f, 0f),
+            boundingBoxSize=null,
             null)
 
         createGameObject(
+            "Cube",
             cubeMesh,
             isStatic = true,
             position=Vector3f(20f, 0f, 0f),
@@ -174,6 +176,7 @@ object Game{
             null)
 
         val ramp = createGameObject(
+            "Ramp1",
             rampMesh,
             isStatic = true,
             position = Vector3f(0f, 0f, -30f),
@@ -182,6 +185,7 @@ object Game{
         )
 
         val ramp2 = createGameObject(
+            "Ramp2",
             bigRampMesh,
             isStatic = true,
             position = Vector3f(-144f, 0f, -30f),
@@ -262,6 +266,7 @@ object Game{
     private fun loop(){
         glClearColor(0.5f, 0.5f, 0.9f, 0.0f)
 
+
         while(!glfwWindowShouldClose(window)){
             val currentFrameTime = glfwGetTime()
             val rawDeltaTime = (currentFrameTime - lastFrameTime).toFloat()
@@ -288,6 +293,7 @@ object Game{
                 }
 
                 physicsEngine.update(deltaTime)
+
                 raceManager.update()
                 when (player.vehicle.gameObject.physicsBody?.isRespawning) {
                     true -> {
@@ -369,7 +375,7 @@ object Game{
         shaderProgram.setUniform("textureSampler", 0)
 
         for(gameObject in gameObjects){
-            if(gameObject.mesh === (gameObjects.find { it.physicsBody?.isStatic == true && it.transform.position.y == 0.0f}?.mesh)){
+            if(gameObject.id == "Ground"){
                 glActiveTexture(GL_TEXTURE0)
                 groundTexture.bind()
             } else{
@@ -401,7 +407,8 @@ object Game{
                 val hitbox = body.boundingBox
 
                 val debugModelMatrix = Matrix4f()
-                    .translate(hitbox.center)
+                    .translate(hitbox.transform.position)
+                    .rotate(hitbox.transform.orientation)
                     .scale(hitbox.size)
                 debugShaderProgram.setUniform("debugColor", Vector3f(1f, 1f, 0f))
                 debugShaderProgram.setUniform("model", debugModelMatrix)
@@ -494,16 +501,20 @@ object Game{
     }
 
     private fun createGameObject (
+        id: String,
         mesh: Mesh,
         isStatic: Boolean,
         position: Vector3f,
-        boundingBoxSize: Vector3f,
+        boundingBoxSize: Vector3f?,
         waypoint: Waypoint?
     ): GameObject{
         val objectTransform = Transform(position)
-        val objectBoundingBox = AxisAlignedBoundingBox(position, boundingBoxSize)
-        val objectBody = PhysicsBody(objectBoundingBox, isStatic)
-        val gameObject = GameObject("Object", objectTransform, mesh, objectBody, waypoint=waypoint)
+        val gameObject = GameObject(id, transform=objectTransform, mesh=mesh, waypoint=waypoint)
+        if(boundingBoxSize != null) {
+            val objectBoundingBox = OrientedBoundingBox(objectTransform, boundingBoxSize)
+            val objectBody = PhysicsBody(objectBoundingBox, isStatic)
+            gameObject.physicsBody = objectBody
+        }
         gameObjects.add(gameObject)
         return gameObject
     }
@@ -511,10 +522,11 @@ object Game{
     private fun createCheckpoint(index: Int, position: Vector3f): GameObject{
         val checkpoint = Waypoint(WaypointType.RACE_CHECKPOINT, index)
         val result =  createGameObject(
+            "Checkpoint$index",
             checkpointMesh,
             isStatic = true,
             position=position,
-            boundingBoxSize=Vector3f(0.0f, 0.0f, 0.0f),
+            boundingBoxSize = null,
             waypoint=checkpoint)
         return result
     }
