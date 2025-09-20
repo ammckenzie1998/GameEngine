@@ -3,7 +3,9 @@ package org.ammck.engine.physics
 import org.ammck.engine.objects.GameObject
 import org.ammck.engine.render.Mesh
 import org.joml.Matrix3f
+import org.joml.Quaternionf
 import org.joml.Vector3f
+import java.util.Vector
 
 data class DebugRaycast(val ray: Ray, val hit: RaycastHit?, val color: Vector3f)
 
@@ -50,7 +52,19 @@ class PhysicsEngine {
         for (obj in physicsObjects){
             val body = obj.physicsBody ?: continue
             if(!body.isStatic){
+                if (body.velocity.x != 0.0f && body.isGrounded) body.velocity.x *= body.linearDrag
+                if (body.velocity.z != 0.0f && body.isGrounded) body.velocity.z *= body.linearDrag
+                body.angularVelocity.mul(body.angularDrag)
+
                 obj.transform.position.add(Vector3f(body.velocity).mul(deltaTime))
+
+                if(body.angularVelocity.lengthSquared() > 0.0001f) {
+                    val deltaRotation = Quaternionf().fromAxisAngleRad(
+                        body.angularVelocity,
+                        body.angularVelocity.length() * deltaTime
+                    )
+                    obj.transform.orientation.mul(deltaRotation).normalize()
+                }
             }
             body.forces.set(0f, 0f, 0f)
         }
@@ -99,17 +113,6 @@ class PhysicsEngine {
         val bodyB = collision.secondObject.physicsBody!!
         val normal = collision.normal
 
-        val relativeVelocity = Vector3f(bodyB.velocity).sub(bodyA.velocity)
-        val velocityAlongNormal = relativeVelocity.dot(normal)
-        if (velocityAlongNormal > 0) return
-
-        val e = 3f // Bounciness
-        var j = -(1 + e) * velocityAlongNormal
-        j /= (bodyA.inverseMass + bodyB.inverseMass)
-        val impulse = Vector3f(normal).mul(j)
-        if (!bodyA.isStatic) bodyA.velocity.sub(Vector3f(impulse).mul(bodyA.inverseMass))
-        if (!bodyB.isStatic) bodyB.velocity.add(Vector3f(impulse).mul(bodyB.inverseMass))
-
         val totalInverseMass = bodyA.inverseMass + bodyB.inverseMass
         if (totalInverseMass <= 0) return
 
@@ -119,6 +122,32 @@ class PhysicsEngine {
         }
         if (!bodyB.isStatic) {
             collision.secondObject.transform.position.add(Vector3f(correction).mul(bodyB.inverseMass))
+        }
+
+        val collisionPoint = collision.getCollisionPoint()
+        val ra = Vector3f(collisionPoint).sub(collision.firstObject.getPosition())
+        val rb = Vector3f(collisionPoint).sub(collision.secondObject.getPosition())
+        val velocityA = Vector3f(bodyA.velocity).add(Vector3f(bodyA.angularVelocity).cross(ra))
+        val velocityB = Vector3f(bodyB.velocity).add(Vector3f(bodyB.angularVelocity).cross(rb))
+
+        val relativeVelocity = Vector3f(velocityB).sub(velocityA)
+        val velocityAlongNormal = relativeVelocity.dot(normal)
+        if (velocityAlongNormal > 0) return
+
+
+        val e = 2f // Bounciness
+        var j = -(1 + e) * velocityAlongNormal
+        val termA = if (bodyA.inverseInertia > 0) Vector3f(ra).cross(normal).lengthSquared() * bodyA.inverseInertia else 0.0f
+        val termB = if (bodyB.inverseInertia > 0) Vector3f(rb).cross(normal).lengthSquared() * bodyB.inverseInertia else 0.0f
+        j /= (totalInverseMass + termA + termB)
+        val impulse = Vector3f(normal).mul(j)
+        if (!bodyA.isStatic) {
+            bodyA.velocity.sub(Vector3f(impulse).mul(bodyA.inverseMass))
+            bodyA.angularVelocity.sub(Vector3f(ra).cross(impulse).mul(bodyA.inverseInertia))
+        }
+        if (!bodyB.isStatic) {
+            bodyB.velocity.add(Vector3f(impulse).mul(bodyB.inverseMass))
+            bodyB.angularVelocity.add(Vector3f(rb).cross(impulse).mul(bodyB.inverseInertia))
         }
 
         if(normal.y < 0.5f && !bodyA.isStatic){

@@ -31,7 +31,7 @@ class AIController(
             } else{
                 steerDirection = 0.0f
             }
-            throttle = 1.0f
+            throttle = 0.8f
 
         }
         commands = VehicleCommands(throttle, steerDirection)

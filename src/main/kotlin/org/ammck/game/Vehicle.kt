@@ -59,9 +59,6 @@ class Vehicle (val gameObject: GameObject) {
             body.forces.add(forward.mul(body.accelerationFactor * commands.throttle))
         }
 
-        if (body.velocity.x != 0.0f) body.velocity.x *= body.dragFactor
-        if (body.velocity.z != 0.0f) body.velocity.z *= body.dragFactor
-
         val finalSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
         animateWheels(deltaTime, finalSpeed)
     }

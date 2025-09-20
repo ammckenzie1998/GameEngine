@@ -8,4 +8,8 @@ data class Collision(
     val secondObject: GameObject,
     val normal: Vector3f,
     val penetration: Float
-)
+){
+    fun getCollisionPoint(): Vector3f{
+        return Vector3f(firstObject.getPosition()).lerp(secondObject.getPosition(), 0.5f)
+    }
+}

@@ -9,7 +9,7 @@ class Camera (
     private val targetTransform: Transform,
     var distance: Float = 8.0f,
     var height: Float = 1.5f,
-    var smoothFactor: Float = 5.0f) {
+    var smoothFactor: Float = 4.0f) {
 
     val position = Vector3f(0.0f, 0.0f, 0.0f)
 
