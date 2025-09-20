@@ -14,7 +14,7 @@ import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.AIController
-import org.ammck.game.GameMode
+import org.ammck.game.GameState
 import org.ammck.game.PlayerInput
 import org.ammck.game.RaceManager
 import org.ammck.game.Vehicle
@@ -77,7 +77,7 @@ import org.lwjgl.system.MemoryUtil
 object Game{
 
     private var window: Long = 0
-    private var activeGameModes = mutableSetOf<GameMode>(GameMode.PLAY)
+    private var activeGameStates = mutableSetOf<GameState>(GameState.PLAY)
     private var framesTilNextModeSwitch = 0
     private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
     private const val INITIAL_WINDOW_WIDTH = 800
@@ -282,7 +282,7 @@ object Game{
             deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
             lastFrameTime = currentFrameTime
 
-            if(activeGameModes.contains(GameMode.EDITOR)){
+            if(activeGameStates.contains(GameState.EDITOR)){
                 val reloadMeshPaths = AssetManager.update()
                 if(reloadMeshPaths.isNotEmpty()){
                     for(gameObject in gameObjects){
@@ -296,7 +296,7 @@ object Game{
                 gameObject.update()
             }
 
-            if(activeGameModes.contains(GameMode.PLAY)) {
+            if(activeGameStates.contains(GameState.PLAY)) {
                 for(ai in aiControllers){
                     ai.update(deltaTime)
                 }
@@ -316,7 +316,7 @@ object Game{
             }
 
             renderScene()
-            if(activeGameModes.contains(GameMode.DEBUG)) renderDebugVisuals()
+            if(activeGameStates.contains(GameState.DEBUG)) renderDebugVisuals()
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
@@ -374,7 +374,7 @@ object Game{
 
         var viewMatrix = Matrix4f()
 
-        if(activeGameModes.contains(GameMode.PLAY)) viewMatrix = playerCamera.getViewMatrix()
+        if(activeGameStates.contains(GameState.PLAY)) viewMatrix = playerCamera.getViewMatrix()
         else viewMatrix = editCamera.getViewMatrix()
 
         shaderProgram.setUniform("projection", projectionMatrix)
@@ -402,7 +402,7 @@ object Game{
         debugShaderProgram.bind()
 
         var viewMatrix = Matrix4f()
-        if(activeGameModes.contains(GameMode.PLAY)) viewMatrix = playerCamera.getViewMatrix()
+        if(activeGameStates.contains(GameState.PLAY)) viewMatrix = playerCamera.getViewMatrix()
         else viewMatrix = editCamera.getViewMatrix()
 
         debugShaderProgram.setUniform("projection", projectionMatrix)
@@ -463,7 +463,7 @@ object Game{
     }
 
     private fun handleInput(){
-        if(activeGameModes.contains(GameMode.PLAY)) {
+        if(activeGameStates.contains(GameState.PLAY)) {
             val playerInput = PlayerInput(
                 glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
                 glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
@@ -473,8 +473,8 @@ object Game{
             )
             player.update(deltaTime, playerInput)
             if (framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
-                activeGameModes.remove(GameMode.PLAY)
-                activeGameModes.add(GameMode.EDITOR)
+                activeGameStates.remove(GameState.PLAY)
+                activeGameStates.add(GameState.EDITOR)
                 framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
             }
         }
@@ -492,13 +492,13 @@ object Game{
             )
             editCamera.update(deltaTime, cameraInput)
             if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
-                activeGameModes.remove(GameMode.EDITOR)
-                activeGameModes.add(GameMode.PLAY)
+                activeGameStates.remove(GameState.EDITOR)
+                activeGameStates.add(GameState.PLAY)
                 framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
             }
         }
         if(glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS){
-            activeGameModes.remove(GameMode.DEBUG) || activeGameModes.add(GameMode.DEBUG)
+            activeGameStates.remove(GameState.DEBUG) || activeGameStates.add(GameState.DEBUG)
         }
         if (framesTilNextModeSwitch > 0) framesTilNextModeSwitch--
     }

@@ -1,6 +1,6 @@
 package org.ammck.game
 
-enum class GameMode {
+enum class GameState {
     PLAY,
     EDITOR,
     DEBUG
