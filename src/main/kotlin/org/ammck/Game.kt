@@ -17,6 +17,7 @@ import org.ammck.game.AIController
 import org.ammck.game.GameMode
 import org.ammck.game.PlayerInput
 import org.ammck.game.RaceManager
+import org.ammck.game.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
 import org.ammck.game.factory.WorldFactory
@@ -32,6 +33,7 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_S
 import org.lwjgl.glfw.GLFW.GLFW_KEY_D
 import org.lwjgl.glfw.GLFW.GLFW_KEY_E
 import org.lwjgl.glfw.GLFW.GLFW_KEY_F1
+import org.lwjgl.glfw.GLFW.GLFW_KEY_F2
 import org.lwjgl.glfw.GLFW.GLFW_KEY_Q
 import org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE
 import org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT
@@ -75,7 +77,7 @@ import org.lwjgl.system.MemoryUtil
 object Game{
 
     private var window: Long = 0
-    private var currentMode = GameMode.PLAY
+    private var activeGameModes = mutableSetOf<GameMode>(GameMode.PLAY)
     private var framesTilNextModeSwitch = 0
     private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
     private const val INITIAL_WINDOW_WIDTH = 800
@@ -83,7 +85,6 @@ object Game{
     private const val WINDOW_TITLE = "Game Engine"
 
     private const val MAX_DELTA_TIME = 0.1f
-    private const val RESPAWN_Y_THRESHOLD = -20f
     private val SPAWN_POINT = Vector3f(0f, 1f, 0f)
 
     private lateinit var shaderProgram: ShaderProgram
@@ -94,7 +95,6 @@ object Game{
     private lateinit var physicsEngine: PhysicsEngine
 
     private lateinit var player: Player
-    private lateinit var aiObject: GameObject
     private val gameObjects = mutableListOf<GameObject>()
     private val aiControllers = mutableListOf<AIController>()
 
@@ -151,10 +151,17 @@ object Game{
         val playerGameObject = playerVehicle.gameObject
         playerGameObject.id = "Player"
 
-        val aiStartTransform = Transform(position = Vector3f(5f, 1f, 0f))
-        val aiVehicle = VehicleFactory.createVehicle(aiStartTransform, chassisMesh, wheelMesh)
-        aiObject = aiVehicle.gameObject
-        gameObjects.add(aiObject)
+        val aiPos1 = Transform(position = Vector3f(5f, 1f, -5f))
+        val aiPos2 = Transform(position = Vector3f(-5f, 1f, -5f))
+        val aiPos3 = Transform(position = Vector3f(0f, 1f, -10f))
+        val aiTransforms = listOf(aiPos1, aiPos2, aiPos3)
+        val aiVehicles = mutableListOf<Vehicle>()
+        for (ai in aiTransforms) {
+            val aiVehicle = VehicleFactory.createVehicle(ai, chassisMesh, wheelMesh)
+            val aiObject = aiVehicle.gameObject
+            aiVehicles.add(aiVehicle)
+            gameObjects.add(aiObject)
+        }
 
         player = Player(playerVehicle)
         gameObjects.add(playerGameObject)
@@ -180,7 +187,7 @@ object Game{
             rampMesh,
             isStatic = true,
             position = Vector3f(0f, 0f, -30f),
-            boundingBoxSize=Vector3f(0f, 0f, 0f),
+            boundingBoxSize=null,
             null
         )
 
@@ -189,7 +196,7 @@ object Game{
             bigRampMesh,
             isStatic = true,
             position = Vector3f(-144f, 0f, -30f),
-            boundingBoxSize = Vector3f(0f, 0f, 0f),
+            boundingBoxSize = null,
             null
         )
 
@@ -233,9 +240,11 @@ object Game{
         gameObjects.addAll(straightThree)
         gameObjects.addAll(straightFour)
 
-        raceManager = RaceManager(listOf(playerVehicle, aiVehicle), gameObjects)
-        val aiController = AIController(aiVehicle, raceManager)
-        aiControllers.add(aiController)
+        raceManager = RaceManager(aiVehicles + playerVehicle, gameObjects)
+        for(ai in aiVehicles){
+            val aiController = AIController(ai, raceManager)
+            aiControllers.add(aiController)
+        }
 
         ramp.transform.orientation.rotateY(Math.toRadians(180.0).toFloat())
 
@@ -273,7 +282,7 @@ object Game{
             deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
             lastFrameTime = currentFrameTime
 
-            if(currentMode == GameMode.EDITOR){
+            if(activeGameModes.contains(GameMode.EDITOR)){
                 val reloadMeshPaths = AssetManager.update()
                 if(reloadMeshPaths.isNotEmpty()){
                     for(gameObject in gameObjects){
@@ -287,7 +296,7 @@ object Game{
                 gameObject.update()
             }
 
-            if(currentMode == GameMode.PLAY) {
+            if(activeGameModes.contains(GameMode.PLAY)) {
                 for(ai in aiControllers){
                     ai.update(deltaTime)
                 }
@@ -307,7 +316,7 @@ object Game{
             }
 
             renderScene()
-            renderDebugVisuals()
+            if(activeGameModes.contains(GameMode.DEBUG)) renderDebugVisuals()
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
@@ -364,11 +373,9 @@ object Game{
         shaderProgram.bind()
 
         var viewMatrix = Matrix4f()
-        when(currentMode){
-            GameMode.PLAY -> {viewMatrix = playerCamera.getViewMatrix()}
-            GameMode.EDITOR -> {viewMatrix = editCamera.getViewMatrix()}
-        }
 
+        if(activeGameModes.contains(GameMode.PLAY)) viewMatrix = playerCamera.getViewMatrix()
+        else viewMatrix = editCamera.getViewMatrix()
 
         shaderProgram.setUniform("projection", projectionMatrix)
         shaderProgram.setUniform("view", viewMatrix)
@@ -395,10 +402,8 @@ object Game{
         debugShaderProgram.bind()
 
         var viewMatrix = Matrix4f()
-        when(currentMode){
-            GameMode.PLAY -> {viewMatrix = playerCamera.getViewMatrix()}
-            GameMode.EDITOR -> {viewMatrix = editCamera.getViewMatrix()}
-        }
+        if(activeGameModes.contains(GameMode.PLAY)) viewMatrix = playerCamera.getViewMatrix()
+        else viewMatrix = editCamera.getViewMatrix()
 
         debugShaderProgram.setUniform("projection", projectionMatrix)
         debugShaderProgram.setUniform("view", viewMatrix)
@@ -458,39 +463,42 @@ object Game{
     }
 
     private fun handleInput(){
-        when(currentMode){
-            GameMode.PLAY -> {
-                val playerInput = PlayerInput(
-                    glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
-                )
-                player.update(deltaTime, playerInput)
-                if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
-                    currentMode = GameMode.EDITOR
-                    framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
-                }
+        if(activeGameModes.contains(GameMode.PLAY)) {
+            val playerInput = PlayerInput(
+                glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
+            )
+            player.update(deltaTime, playerInput)
+            if (framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
+                activeGameModes.remove(GameMode.PLAY)
+                activeGameModes.add(GameMode.EDITOR)
+                framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
             }
-            GameMode.EDITOR -> {
-                val isDragging = glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
-                val cameraInput = CameraInput(
-                    glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS,
-                    glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS,
-                    mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
-                    mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
-                )
-                editCamera.update(deltaTime, cameraInput)
-                if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
-                    currentMode = GameMode.PLAY
-                    framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
-                }
+        }
+        else{
+            val isDragging = glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
+            val cameraInput = CameraInput(
+                glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS,
+                mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
+                mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
+            )
+            editCamera.update(deltaTime, cameraInput)
+            if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+                activeGameModes.remove(GameMode.EDITOR)
+                activeGameModes.add(GameMode.PLAY)
+                framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
             }
+        }
+        if(glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS){
+            activeGameModes.remove(GameMode.DEBUG) || activeGameModes.add(GameMode.DEBUG)
         }
         if (framesTilNextModeSwitch > 0) framesTilNextModeSwitch--
     }
