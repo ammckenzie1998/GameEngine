@@ -103,7 +103,7 @@ class PhysicsEngine {
         val velocityAlongNormal = relativeVelocity.dot(normal)
         if (velocityAlongNormal > 0) return
 
-        val e = 0.0f // Bounciness
+        val e = 3f // Bounciness
         var j = -(1 + e) * velocityAlongNormal
         j /= (bodyA.inverseMass + bodyB.inverseMass)
         val impulse = Vector3f(normal).mul(j)
