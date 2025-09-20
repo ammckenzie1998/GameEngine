@@ -38,6 +38,7 @@ class PhysicsEngine {
                 physicsBody.isGrounded = false
                 physicsBody.isOnRamp = false
                 physicsBody.isRespawning = false
+                physicsBody.lastImpactImpulse = 0.0f
 
                 obj.suspension?.let {
                         suspension ->  applySuspensionForces(obj, physicsBody, suspension)
@@ -144,10 +145,12 @@ class PhysicsEngine {
         if (!bodyA.isStatic) {
             bodyA.velocity.sub(Vector3f(impulse).mul(bodyA.inverseMass))
             bodyA.angularVelocity.sub(Vector3f(ra).cross(impulse).mul(bodyA.inverseInertia))
+            bodyA.lastImpactImpulse += j
         }
         if (!bodyB.isStatic) {
             bodyB.velocity.add(Vector3f(impulse).mul(bodyB.inverseMass))
             bodyB.angularVelocity.add(Vector3f(rb).cross(impulse).mul(bodyB.inverseInertia))
+            bodyB.lastImpactImpulse += j
         }
 
         if(normal.y < 0.5f && !bodyA.isStatic){

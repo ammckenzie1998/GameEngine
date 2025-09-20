@@ -9,6 +9,7 @@ import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector3f
 import java.util.Vector
+import kotlin.math.max
 
 class Vehicle (val gameObject: GameObject) {
 
@@ -19,6 +20,10 @@ class Vehicle (val gameObject: GameObject) {
     private val AERIAL_ROTATION_SPEED = 10.0f
     private val GROUND_ALIGNMENT_SPEED = 8.0f
 
+    private val MAX_HEALTH = 500.0f
+    private var currentHealth = MAX_HEALTH
+    var isDestroyed: Boolean = false
+
     private var wasAirborne = false
 
     fun update(
@@ -26,16 +31,41 @@ class Vehicle (val gameObject: GameObject) {
         vehicleCommands: VehicleCommands
     ) {
         val body = gameObject.physicsBody ?: return
-        when (body.isGrounded) {
-            true -> {
-                groundControl(deltaTime, vehicleCommands)
+        if(currentHealth > 0) {
+            when (body.isGrounded) {
+                true -> {
+                    groundControl(deltaTime, vehicleCommands)
+                }
+
+                false -> {
+                    aerialControl(deltaTime, vehicleCommands)
+                }
             }
-            false -> {
-                aerialControl(deltaTime, vehicleCommands)
-            }
+            animateSteering(deltaTime, vehicleCommands)
+            if (body.lastImpactImpulse > 0) applyDamage(body.lastImpactImpulse)
         }
-        animateSteering(deltaTime, vehicleCommands)
         wasAirborne = !body.isGrounded
+    }
+
+    fun applyDamage(damageAmount: Float){
+        if (isDestroyed) return
+
+        currentHealth -= damageAmount
+        if(currentHealth <= 0){
+            currentHealth = 0f
+            isDestroyed = true
+        }
+        if(gameObject.id == "Player") println("Health: $currentHealth")
+    }
+
+    fun addHealthFlat(healthAmount: Float){
+        currentHealth += healthAmount
+        currentHealth = max(currentHealth, MAX_HEALTH)
+    }
+
+    fun addHealthPercentage(healthAmount: Float){
+        currentHealth += (healthAmount * MAX_HEALTH)
+        currentHealth = max(currentHealth, MAX_HEALTH)
     }
 
     private fun groundControl(deltaTime: Float, commands: VehicleCommands){

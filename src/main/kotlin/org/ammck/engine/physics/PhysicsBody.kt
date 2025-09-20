@@ -28,4 +28,6 @@ class PhysicsBody(
     var isGrounded: Boolean = false
     var isOnRamp: Boolean = false
     var isRespawning: Boolean = false
+    
+    var lastImpactImpulse: Float = 0.0f
 }
