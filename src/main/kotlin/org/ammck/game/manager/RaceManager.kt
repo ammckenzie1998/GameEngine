@@ -1,7 +1,8 @@
-package org.ammck.game
+package org.ammck.game.manager
 
 import org.ammck.engine.objects.GameObject
-import org.ammck.games.Waypoint
+import org.ammck.game.Vehicle
+import org.ammck.game.WaypointType
 
 class RaceManager(
     val racers: List<Vehicle>,
