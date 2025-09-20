@@ -23,6 +23,7 @@ import org.lwjgl.opengl.GL20.glGetShaderi
 import org.lwjgl.opengl.GL20.glGetUniformLocation
 import org.lwjgl.opengl.GL20.glLinkProgram
 import org.lwjgl.opengl.GL20.glShaderSource
+import org.lwjgl.opengl.GL20.glUniform1f
 import org.lwjgl.opengl.GL20.glUniform1i
 import org.lwjgl.opengl.GL20.glUniform3f
 import org.lwjgl.opengl.GL20.glUniformMatrix3fv
@@ -95,6 +96,13 @@ class ShaderProgram (vertexPath: String, fragmentPath: String) {
         val location = glGetUniformLocation(programId, uniformName)
         if(location != -1){
             glUniform3f(location, value.x, value.y, value.z)
+        }
+    }
+
+    fun setUniform(uniformName: String, value: Float){
+        val location = glGetUniformLocation(programId, uniformName)
+        if(location != -1){
+            glUniform1f(location, value)
         }
     }
 

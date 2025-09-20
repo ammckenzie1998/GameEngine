@@ -21,13 +21,16 @@ class Vehicle (val gameObject: GameObject) {
     private val POINTS_PER_RADIAN_ROTATION = 1.0f
     private val FULL_FLIP_BONUS = 1.0f
 
-    private val MAX_HEALTH = 100.0f
-    private var currentHealth = MAX_HEALTH
+    val MAX_HEALTH = 100.0f
+    var currentHealth = MAX_HEALTH
+        private set
     var isDestroyed: Boolean = false
+        private set
 
-    private val MAX_STYLEPOINTS = 100.0f
+    val MAX_STYLEPOINTS = 100.0f
     private val STYLEPOINT_DECAY_RATE = 5.0f
-    private var currentStylePoints = 0.0f
+    var currentStylePoints = 0.0f
+        private set
 
     private var currentAirtime = 0.0f
     private var totalPitchRotation = 0.0f

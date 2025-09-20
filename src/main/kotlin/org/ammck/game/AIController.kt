@@ -1,10 +1,12 @@
 package org.ammck.game
 
+import org.ammck.game.manager.RaceManager
 import org.joml.Vector3f
 
 class AIController(
     val vehicle: Vehicle,
-    private val raceManager: RaceManager) {
+    private val raceManager: RaceManager
+) {
 
     fun update(
         deltaTime: Float

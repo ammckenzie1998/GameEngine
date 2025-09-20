@@ -16,11 +16,12 @@ import org.ammck.engine.render.Texture
 import org.ammck.game.AIController
 import org.ammck.game.GameState
 import org.ammck.game.PlayerInput
-import org.ammck.game.RaceManager
+import org.ammck.game.manager.RaceManager
 import org.ammck.game.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
 import org.ammck.game.factory.WorldFactory
+import org.ammck.game.manager.HudManager
 import org.ammck.games.Waypoint
 import org.joml.Math.min
 import org.joml.Matrix4f
@@ -89,6 +90,8 @@ object Game{
 
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
+    private lateinit var hudShaderProgram: ShaderProgram
+    private lateinit var hudManager: HudManager
 
     private lateinit var playerCamera: Camera
     private lateinit var editCamera: FreeFlyCamera
@@ -110,6 +113,7 @@ object Game{
     private lateinit var defaultTexture: Texture
 
     private val projectionMatrix = Matrix4f()
+    private val orthologicalMatrix = Matrix4f()
     private var lastFrameTime = 0.0
     private var deltaTime = 0.0f
 
@@ -130,6 +134,9 @@ object Game{
         initWindow()
         shaderProgram = ShaderProgram("shaders/default.vert", "shaders/default.frag")
         debugShaderProgram = ShaderProgram("shaders/debug.vert", "shaders/debug.frag")
+        hudShaderProgram = ShaderProgram("shaders/hud.vert", "shaders/hud.frag")
+
+        setupMatrices()
 
         physicsEngine = PhysicsEngine()
 
@@ -150,6 +157,7 @@ object Game{
             Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
         playerGameObject.id = "Player"
+        hudManager = HudManager(playerVehicle, hudShaderProgram, orthologicalMatrix)
 
         val aiPos1 = Transform(position = Vector3f(5f, 1f, -5f))
         val aiPos2 = Transform(position = Vector3f(-5f, 1f, -5f))
@@ -254,8 +262,6 @@ object Game{
         playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
         editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
 
-        setupMatrices()
-
         glfwSetCursorPosCallback(window) {
             _, xpos, ypos ->
                 if (firstMouse){
@@ -316,6 +322,7 @@ object Game{
             }
 
             renderScene()
+            if(activeGameStates.contains(GameState.PLAY)) renderHUD()
             if(activeGameStates.contains(GameState.DEBUG)) renderDebugVisuals()
 
             mouseDeltaX = 0.0f
@@ -335,6 +342,7 @@ object Game{
         AssetManager.cleanup()
         groundTexture.cleanup()
         defaultTexture.cleanup()
+        hudManager.cleanup()
 
         glfwDestroyWindow(window)
         glfwTerminate()
@@ -454,6 +462,10 @@ object Game{
         glDisable(GL_BLEND)
     }
 
+    private fun renderHUD(){
+        hudManager.draw()
+    }
+
     private fun drawGameObject(gameObject: GameObject){
         shaderProgram.setUniform("model", gameObject.globalMatrix)
         gameObject.mesh.draw()
@@ -506,6 +518,7 @@ object Game{
     private fun setupMatrices(){
         val aspectRatio = INITIAL_WINDOW_WIDTH.toFloat() / INITIAL_WINDOW_HEIGHT.toFloat()
         projectionMatrix.perspective(Math.toRadians(45.0).toFloat(), aspectRatio, 0.1f, 1000.0f)
+        orthologicalMatrix.ortho(0.0f, INITIAL_WINDOW_WIDTH.toFloat(), 0.0f, INITIAL_WINDOW_HEIGHT.toFloat(), -1.0f, 1.0f)
     }
 
     private fun createGameObject (
