@@ -1,14 +1,11 @@
 package org.ammck.game
 
 import org.ammck.engine.objects.GameObject
-import org.joml.Math.cos
-import org.joml.Math.lerp
-import org.joml.Math.sin
 import org.joml.Math.sqrt
-import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector3f
-import java.util.Vector
+import java.lang.Float.min
+import kotlin.math.abs
 import kotlin.math.max
 
 class Vehicle (val gameObject: GameObject) {
@@ -20,9 +17,22 @@ class Vehicle (val gameObject: GameObject) {
     private val AERIAL_ROTATION_SPEED = 10.0f
     private val GROUND_ALIGNMENT_SPEED = 8.0f
 
-    private val MAX_HEALTH = 500.0f
+    private val POINTS_PER_SECOND_AIRTIME = 1.0f
+    private val POINTS_PER_RADIAN_ROTATION = 1.0f
+    private val FULL_FLIP_BONUS = 1.0f
+
+    private val MAX_HEALTH = 100.0f
     private var currentHealth = MAX_HEALTH
     var isDestroyed: Boolean = false
+
+    private val MAX_STYLEPOINTS = 100.0f
+    private val STYLEPOINT_DECAY_RATE = 5.0f
+    private var currentStylePoints = 0.0f
+
+    private var currentAirtime = 0.0f
+    private var totalPitchRotation = 0.0f
+    private var totalRollRotation = 0.0f
+    private var lastFrameOrientation = Quaternionf()
 
     private var wasAirborne = false
 
@@ -31,10 +41,25 @@ class Vehicle (val gameObject: GameObject) {
         vehicleCommands: VehicleCommands
     ) {
         val body = gameObject.physicsBody ?: return
+
+        val justLanded = wasAirborne && body.isGrounded
+        val justTookOff = !wasAirborne && !body.isGrounded
+
+        if(justLanded){
+            calculateStuntBonus()
+        }
+        if(justTookOff){
+            currentAirtime = 0.0f
+            totalPitchRotation = 0.0f
+            totalRollRotation = 0.0f
+            lastFrameOrientation.set(gameObject.transform.orientation)
+        }
+
         if(currentHealth > 0) {
             when (body.isGrounded) {
                 true -> {
                     groundControl(deltaTime, vehicleCommands)
+                    currentStylePoints = max(0f, currentStylePoints - STYLEPOINT_DECAY_RATE * deltaTime)
                 }
 
                 false -> {
@@ -50,7 +75,11 @@ class Vehicle (val gameObject: GameObject) {
     fun applyDamage(damageAmount: Float){
         if (isDestroyed) return
 
-        currentHealth -= damageAmount
+        val styleMultiplier = currentStylePoints / MAX_STYLEPOINTS
+        val damageReduction = damageAmount * styleMultiplier
+        val damageFinal = damageAmount - damageReduction
+
+        currentHealth -= damageFinal
         if(currentHealth <= 0){
             currentHealth = 0f
             isDestroyed = true
@@ -66,6 +95,23 @@ class Vehicle (val gameObject: GameObject) {
     fun addHealthPercentage(healthAmount: Float){
         currentHealth += (healthAmount * MAX_HEALTH)
         currentHealth = max(currentHealth, MAX_HEALTH)
+    }
+
+    private fun calculateStuntBonus(){
+        var bonus = 0.0f
+        bonus += currentAirtime * POINTS_PER_SECOND_AIRTIME
+
+        val totalRotation = totalPitchRotation + totalRollRotation
+        bonus += totalRotation * POINTS_PER_RADIAN_ROTATION
+
+        val fullFlips = (totalPitchRotation / (2 * Math.PI)).toInt()
+        val fullRolls = (totalRollRotation / (2 * Math.PI)).toInt()
+        bonus += (fullFlips + fullRolls) * FULL_FLIP_BONUS
+
+        if(bonus > 5) {
+            if (gameObject.id == "Player") println("Stunt bonus! Airtime: $currentAirtime, Flips: $fullFlips, Rolls: $fullRolls, Award: $bonus")
+            currentStylePoints = min(MAX_STYLEPOINTS, currentStylePoints + bonus)
+        }
     }
 
     private fun groundControl(deltaTime: Float, commands: VehicleCommands){
@@ -86,7 +132,9 @@ class Vehicle (val gameObject: GameObject) {
 
         if(commands.throttle != 0.0f){
             val forward = Vector3f(0f, 0f, -1f).rotate(transform.orientation)
-            body.forces.add(forward.mul(body.accelerationFactor * commands.throttle))
+            val styleMultiplier = 1.0f + (currentStylePoints / MAX_STYLEPOINTS)
+            val accel = body.accelerationFactor * styleMultiplier
+            body.forces.add(forward.mul(accel * commands.throttle))
         }
 
         val finalSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
@@ -95,6 +143,15 @@ class Vehicle (val gameObject: GameObject) {
 
     private fun aerialControl(deltaTime: Float, commands: VehicleCommands){
         val transform = gameObject.transform
+        currentAirtime += deltaTime
+
+        val deltaRotation = Quaternionf(lastFrameOrientation).invert().mul(transform.orientation)
+        val eulerDelta = deltaRotation.getEulerAnglesXYZ(Vector3f())
+
+        totalPitchRotation += abs(eulerDelta.x)
+        totalRollRotation += abs(eulerDelta.z)
+        lastFrameOrientation.set(transform.orientation)
+
         if(commands.pitchMode){
             transform.orientation.rotateX(-commands.throttle * AERIAL_ROTATION_SPEED * deltaTime)
             transform.orientation.rotateZ(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
