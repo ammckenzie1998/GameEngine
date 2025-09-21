@@ -6,9 +6,11 @@ import org.ammck.engine.objects.GameObject
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
+import org.ammck.engine.assets.Asset
 import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
+import org.ammck.engine.objects.LevelLoader
 import org.ammck.game.Player
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
@@ -85,6 +87,8 @@ object Game{
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
 
+    private var currentLevelPath = "levels/level1.amlevel"
+
     private const val MAX_DELTA_TIME = 0.1f
     private val SPAWN_POINT = Vector3f(0f, 1f, 0f)
 
@@ -103,8 +107,6 @@ object Game{
 
     private lateinit var wheelMesh: Mesh
     private lateinit var cubeMesh: Mesh
-    private lateinit var roadStraightMesh: Mesh
-    private lateinit var roadCurveMesh: Mesh
     private lateinit var checkpointMesh: Mesh
 
     private lateinit var raceManager: RaceManager
@@ -138,17 +140,31 @@ object Game{
 
         setupMatrices()
 
+        loadLevel(currentLevelPath)
+
+        glfwSetCursorPosCallback(window) {
+            _, xpos, ypos ->
+                if (firstMouse){
+                    lastMouseX = xpos
+                    lastMouseY = ypos
+                    firstMouse = false
+                }
+                mouseDeltaX = (xpos - lastMouseX).toFloat()
+                mouseDeltaY = (lastMouseY - ypos).toFloat()
+                lastMouseX = xpos
+                lastMouseY = ypos
+        }
+
+        lastFrameTime = glfwGetTime()
+    }
+
+    private fun loadLevel(levelPath: String){
         physicsEngine = PhysicsEngine()
 
         wheelMesh = AssetManager.getMesh("models/wheel.ammodel")
         val chassisMesh = AssetManager.getMesh("models/car.ammodel")
         val groundMesh = defineGround()
         cubeMesh = AssetManager.getMesh("models/cube.ammodel")
-        val rampMesh = AssetManager.getMesh("models/ramp.ammodel")
-        val bigRampMesh = AssetManager.getMesh("models/big_ramp.ammodel")
-        roadStraightMesh = AssetManager.getMesh("models/road_straight.ammodel")
-        roadCurveMesh = AssetManager.getMesh("models/road_curve.ammodel")
-        checkpointMesh = AssetManager.getMesh("models/checkpoint.ammodel")
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
@@ -182,71 +198,9 @@ object Game{
             boundingBoxSize=null,
             null)
 
-        createGameObject(
-            "Cube",
-            cubeMesh,
-            isStatic = true,
-            position=Vector3f(20f, 0f, 0f),
-            boundingBoxSize=Vector3f(1.0f, 1.0f, 1.0f),
-            null)
-
-        val ramp = createGameObject(
-            "Ramp1",
-            rampMesh,
-            isStatic = true,
-            position = Vector3f(0f, 0f, -30f),
-            boundingBoxSize=null,
-            null
-        )
-
-        val ramp2 = createGameObject(
-            "Ramp2",
-            bigRampMesh,
-            isStatic = true,
-            position = Vector3f(-144f, 0f, -30f),
-            boundingBoxSize = null,
-            null
-        )
-
-        val startingStraight = WorldFactory.createStraightRoad(
-            Vector3f(0f, 0.01f, 128f),
-            0.0,
-            8
-        )
-        val straightTwo = WorldFactory.createStraightRoad(
-            Vector3f(-24f, 0.01f, -120f),
-            90.0,
-            4
-        )
-        val straightThree = WorldFactory.createStraightRoad(
-            Vector3f(-144f, 0.01f, 8f*16f),
-            0.0,
-            8
-        )
-        val straightFour = WorldFactory.createStraightRoad(
-            Vector3f(-24f, 0.01f, 152f),
-            90.0,
-            4
-        )
-
-        val checkpoint1 = createCheckpoint(
-            index=0,
-            position=Vector3f(0f, 0f, -110f))
-
-        val checkpoint2 = createCheckpoint(
-            index=1,
-            position=Vector3f(-120f, 0f, -120f))
-        checkpoint2.transform.orientation.rotateY(Math.toRadians(90.0).toFloat())
-
-        val checkpoint3 = createCheckpoint(
-            index=2,
-            position=Vector3f(-16f, 0f, 152f))
-        checkpoint3.transform.orientation.rotateY(Math.toRadians(270.0).toFloat())
-
-        gameObjects.addAll(startingStraight)
-        gameObjects.addAll(straightTwo)
-        gameObjects.addAll(straightThree)
-        gameObjects.addAll(straightFour)
+        val levelObjects = AssetManager.getLevelData(levelPath)
+        gameObjects.addAll(levelObjects)
+        physicsEngine.addWorldObjects(*levelObjects.toTypedArray(), ground)
 
         raceManager = RaceManager(aiVehicles + playerVehicle, gameObjects)
         for(ai in aiVehicles){
@@ -254,28 +208,16 @@ object Game{
             aiControllers.add(aiController)
         }
 
-        ramp.transform.orientation.rotateY(Math.toRadians(180.0).toFloat())
-
         physicsEngine.addObjects(*gameObjects.toTypedArray())
-        physicsEngine.addWorldObjects(ramp, ground, ramp2)
 
         playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
         editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
+    }
 
-        glfwSetCursorPosCallback(window) {
-            _, xpos, ypos ->
-                if (firstMouse){
-                    lastMouseX = xpos
-                    lastMouseY = ypos
-                    firstMouse = false
-                }
-                mouseDeltaX = (xpos - lastMouseX).toFloat()
-                mouseDeltaY = (lastMouseY - ypos).toFloat()
-                lastMouseX = xpos
-                lastMouseY = ypos
-        }
-
-        lastFrameTime = glfwGetTime()
+    private fun clearWorld(){
+        physicsEngine.clear()
+        aiControllers.clear()
+        gameObjects.clear()
     }
 
     private fun loop(){
@@ -289,10 +231,15 @@ object Game{
             lastFrameTime = currentFrameTime
 
             if(activeGameStates.contains(GameState.EDITOR)){
-                val reloadMeshPaths = AssetManager.update()
-                if(reloadMeshPaths.isNotEmpty()){
+                val (reloadMeshes, reloadLevels) = AssetManager.update()
+                if(reloadLevels.contains(currentLevelPath)){
+                    clearWorld()
+                    loadLevel(currentLevelPath)
+                }
+
+                if(reloadMeshes.isNotEmpty()){
                     for(gameObject in gameObjects){
-                        gameObject.updateMesh(reloadMeshPaths)
+                        gameObject.updateMesh(reloadMeshes)
                     }
                 }
             }

@@ -213,4 +213,11 @@ class PhysicsEngine {
             }
         }
     }
+
+    fun clear(){
+        physicsObjects.clear()
+        worldObjects.clear()
+        collisions.clear()
+        debugRaycastResults.clear()
+    }
 }
