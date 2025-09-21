@@ -140,7 +140,7 @@ class PhysicsEngine {
         var j = -(1 + e) * velocityAlongNormal
         val termA = if (bodyA.inverseInertia > 0) Vector3f(ra).cross(normal).lengthSquared() * bodyA.inverseInertia else 0.0f
         val termB = if (bodyB.inverseInertia > 0) Vector3f(rb).cross(normal).lengthSquared() * bodyB.inverseInertia else 0.0f
-        j /= (totalInverseMass + termA + termB)
+        if(totalInverseMass + termA + termB > 0) j /= (totalInverseMass + termA + termB) else j = 0.0f
         val impulse = Vector3f(normal).mul(j)
         if (!bodyA.isStatic) {
             bodyA.velocity.sub(Vector3f(impulse).mul(bodyA.inverseMass))
