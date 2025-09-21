@@ -86,6 +86,9 @@ object Game{
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
+    private const val TICK_RATE = 250f
+    private const val FIXED_DELTA_TIME = 1.0f / TICK_RATE
+    private var accumulator = 0.0f
 
     private var currentLevelPath = "levels/level1.amlevel"
 
@@ -117,7 +120,6 @@ object Game{
     private val projectionMatrix = Matrix4f()
     private val orthologicalMatrix = Matrix4f()
     private var lastFrameTime = 0.0
-    private var deltaTime = 0.0f
 
     private var mouseDeltaX = 0.0f
     private var mouseDeltaY = 0.0f
@@ -226,9 +228,10 @@ object Game{
 
         while(!glfwWindowShouldClose(window)){
             val currentFrameTime = glfwGetTime()
-            val rawDeltaTime = (currentFrameTime - lastFrameTime).toFloat()
-            deltaTime = min(rawDeltaTime, MAX_DELTA_TIME)
+            var frameTime = (currentFrameTime - lastFrameTime).toFloat()
+            if(frameTime > 0.01f) frameTime = 0.01f
             lastFrameTime = currentFrameTime
+            accumulator += frameTime
 
             if(activeGameStates.contains(GameState.EDITOR)){
                 val (reloadMeshes, reloadLevels) = AssetManager.update()
@@ -243,34 +246,35 @@ object Game{
                     }
                 }
             }
-
-            handleInput()
-            for(gameObject in gameObjects) {
-                gameObject.update()
-            }
-
-            if(activeGameStates.contains(GameState.PLAY)) {
-                for(ai in aiControllers){
-                    ai.update(deltaTime)
+            while(accumulator >= FIXED_DELTA_TIME) {
+                for(gameObject in gameObjects) {
+                    gameObject.update()
                 }
+                handleInput()
+                if(activeGameStates.contains(GameState.PLAY)) {
 
-                physicsEngine.update(deltaTime)
-
-                raceManager.update()
-                when (player.vehicle.gameObject.physicsBody?.isRespawning) {
-                    true -> {
-                        playerCamera.reset()
+                    for (ai in aiControllers) {
+                        ai.update(FIXED_DELTA_TIME)
                     }
 
-                    false, null -> {
-                        playerCamera.update(deltaTime, player.vehicle.gameObject.physicsBody!!.isGrounded)
-                    }
-                }
-            }
+                    physicsEngine.update(FIXED_DELTA_TIME)
 
-            renderScene()
-            if(activeGameStates.contains(GameState.PLAY)) renderHUD()
-            if(activeGameStates.contains(GameState.DEBUG)) renderDebugVisuals()
+                    raceManager.update()
+                    when (player.vehicle.gameObject.physicsBody?.isRespawning) {
+                        true -> {
+                            playerCamera.reset()
+                        }
+
+                        false, null -> {
+                            playerCamera.update(FIXED_DELTA_TIME, player.vehicle.gameObject.physicsBody!!.isGrounded)
+                        }
+                    }
+                    accumulator -= FIXED_DELTA_TIME
+                }
+                renderScene()
+                if(activeGameStates.contains(GameState.PLAY)) renderHUD()
+                if(activeGameStates.contains(GameState.DEBUG)) renderDebugVisuals()
+            }
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
@@ -430,7 +434,7 @@ object Game{
                 glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
                 glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
             )
-            player.update(deltaTime, playerInput)
+            player.update(FIXED_DELTA_TIME, playerInput)
             if (framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
                 activeGameStates.remove(GameState.PLAY)
                 activeGameStates.add(GameState.EDITOR)
@@ -449,7 +453,7 @@ object Game{
                 mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
                 mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
             )
-            editCamera.update(deltaTime, cameraInput)
+            editCamera.update(FIXED_DELTA_TIME, cameraInput)
             if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
                 activeGameStates.remove(GameState.EDITOR)
                 activeGameStates.add(GameState.PLAY)
