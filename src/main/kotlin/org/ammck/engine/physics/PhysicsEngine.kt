@@ -86,7 +86,7 @@ class PhysicsEngine {
                 bodyB.boundingBox.transform.position.set(objB.transform.position)
 
                 val mtv = bodyA.boundingBox.getCollisionResponse(bodyB.boundingBox)
-                if (mtv != null) {
+                if (mtv != null && mtv.length() > 0.00001) {
                     val penetration = mtv.length()
                     val normal = Vector3f(mtv).normalize()
                     collisions.add(Collision(objA, objB, normal, penetration))
