@@ -159,6 +159,7 @@ object Game{
 
         lastFrameTime = glfwGetTime()
         gameStates[GameState.PLAY] = true
+        editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
     }
 
     private fun loadLevel(levelPath: String){
@@ -213,7 +214,6 @@ object Game{
         physicsEngine.addObjects(*gameObjects.toTypedArray())
 
         playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
-        editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
     }
 
     private fun clearWorld(){
