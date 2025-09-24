@@ -176,7 +176,7 @@ object Game{
         val playerVehicle = VehicleFactory.createVehicle(
             "Player", Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
-        hudManager = HudManager(playerVehicle, hudShaderProgram, orthologicalMatrix)
+        hudManager = HudManager(playerVehicle, hudShaderProgram, orthologicalMatrix, defaultTexture)
 
         val aiPos1 = Transform(position = Vector3f(5f, 1f, -5f))
         val aiPos2 = Transform(position = Vector3f(-5f, 1f, -5f))
@@ -261,7 +261,6 @@ object Game{
 
                     raceManager.update()
                     if(!raceManager.raceState.inProgress){
-                        println("Race finished! Winner: ${raceManager.raceState.leaderboard[0].gameObject.id}" )
                         gameStates[GameState.RACE_OVER] = true
                     }
 
