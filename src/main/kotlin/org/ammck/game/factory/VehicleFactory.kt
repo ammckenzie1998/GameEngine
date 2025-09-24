@@ -11,7 +11,7 @@ import org.joml.Vector3f
 
 object VehicleFactory {
 
-    fun createVehicle(initialTransform: Transform, chassisMesh: Mesh, wheelMesh: Mesh): Vehicle {
+    fun createVehicle(id: String, initialTransform: Transform, chassisMesh: Mesh, wheelMesh: Mesh): Vehicle {
         val boundingBox = OrientedBoundingBox(initialTransform, Vector3f(2.0f, 1.5f, 4.0f))
         val body = PhysicsBody(boundingBox)
 
@@ -32,7 +32,7 @@ object VehicleFactory {
             height = 0.5f
         )
 
-        val gameObject = GameObject("placeholder", initialTransform, chassisMesh, body, suspension)
+        val gameObject = GameObject(id, initialTransform, chassisMesh, body, suspension)
 
         gameObject.addChildren(frWheel, flWheel, rrWheel, rlWheel)
 

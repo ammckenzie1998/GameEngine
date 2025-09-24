@@ -18,7 +18,7 @@ import org.ammck.engine.render.Texture
 import org.ammck.game.AIController
 import org.ammck.game.GameState
 import org.ammck.game.PlayerInput
-import org.ammck.game.manager.RaceManager
+import org.ammck.game.race.RaceManager
 import org.ammck.game.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
@@ -173,9 +173,8 @@ object Game{
         defaultTexture = Texture("textures/default.png")
 
         val playerVehicle = VehicleFactory.createVehicle(
-            Transform(SPAWN_POINT), chassisMesh, wheelMesh)
+            "Player", Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
-        playerGameObject.id = "Player"
         hudManager = HudManager(playerVehicle, hudShaderProgram, orthologicalMatrix)
 
         val aiPos1 = Transform(position = Vector3f(5f, 1f, -5f))
@@ -183,8 +182,8 @@ object Game{
         val aiPos3 = Transform(position = Vector3f(0f, 1f, -10f))
         val aiTransforms = listOf(aiPos1, aiPos2, aiPos3)
         val aiVehicles = mutableListOf<Vehicle>()
-        for (ai in aiTransforms) {
-            val aiVehicle = VehicleFactory.createVehicle(ai, chassisMesh, wheelMesh)
+        for (i in 0 until aiTransforms.size) {
+            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], chassisMesh, wheelMesh)
             val aiObject = aiVehicle.gameObject
             aiVehicles.add(aiVehicle)
             gameObjects.add(aiObject)
@@ -259,7 +258,13 @@ object Game{
                         ai.update(FIXED_DELTA_TIME)
                     }
                     physicsEngine.update(FIXED_DELTA_TIME)
+
                     raceManager.update()
+                    if(!raceManager.raceState.inProgress){
+                        println("Race finished! Winner: ${raceManager.raceState.leaderboard[0].gameObject.id}" )
+                        gameStates[GameState.RACE_OVER] = true
+                    }
+
                 } else if (gameStates[GameState.EDITOR] == true){
                     editCamera.update(FIXED_DELTA_TIME, editorInput)
                 }
