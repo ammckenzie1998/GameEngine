@@ -80,7 +80,7 @@ import org.lwjgl.system.MemoryUtil
 object Game{
 
     private var window: Long = 0
-    private var activeGameStates = mutableSetOf<GameState>(GameState.PLAY)
+    private var gameStates = mutableMapOf<GameState, Boolean>()
     private var framesTilNextModeSwitch = 0
     private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
     private const val INITIAL_WINDOW_WIDTH = 800
@@ -158,6 +158,7 @@ object Game{
         }
 
         lastFrameTime = glfwGetTime()
+        gameStates[GameState.PLAY] = true
     }
 
     private fun loadLevel(levelPath: String){
@@ -229,11 +230,15 @@ object Game{
         while(!glfwWindowShouldClose(window)){
             val currentFrameTime = glfwGetTime()
             var frameTime = (currentFrameTime - lastFrameTime).toFloat()
-            if(frameTime > 0.01f) frameTime = 0.01f
+            if(frameTime > 0.25f) frameTime = 0.25f
             lastFrameTime = currentFrameTime
             accumulator += frameTime
 
-            if(activeGameStates.contains(GameState.EDITOR)){
+            handleGlobalInput()
+            val playerInput = getPlayerInput()
+            val editorInput = getEditorInput()
+
+            if(gameStates[GameState.EDITOR] == true){
                 val (reloadMeshes, reloadLevels) = AssetManager.update()
                 if(reloadLevels.contains(currentLevelPath)){
                     clearWorld()
@@ -246,35 +251,34 @@ object Game{
                     }
                 }
             }
-            while(accumulator >= FIXED_DELTA_TIME) {
-                for(gameObject in gameObjects) {
-                    gameObject.update()
-                }
-                handleInput()
-                if(activeGameStates.contains(GameState.PLAY)) {
 
+            while(accumulator >= FIXED_DELTA_TIME) {
+                if(gameStates[GameState.PLAY] == true) {
+                    player.update(FIXED_DELTA_TIME, playerInput)
                     for (ai in aiControllers) {
                         ai.update(FIXED_DELTA_TIME)
                     }
-
                     physicsEngine.update(FIXED_DELTA_TIME)
-
                     raceManager.update()
-                    when (player.vehicle.gameObject.physicsBody?.isRespawning) {
-                        true -> {
-                            playerCamera.reset()
-                        }
-
-                        false, null -> {
-                            playerCamera.update(FIXED_DELTA_TIME, player.vehicle.gameObject.physicsBody!!.isGrounded)
-                        }
-                    }
-                    accumulator -= FIXED_DELTA_TIME
+                } else if (gameStates[GameState.EDITOR] == true){
+                    editCamera.update(FIXED_DELTA_TIME, editorInput)
                 }
-                renderScene()
-                if(activeGameStates.contains(GameState.PLAY)) renderHUD()
-                if(activeGameStates.contains(GameState.DEBUG)) renderDebugVisuals()
+                accumulator -= FIXED_DELTA_TIME
             }
+
+            for(gameObject in gameObjects) {
+                gameObject.update()
+            }
+
+            when (player.vehicle.gameObject.physicsBody?.isRespawning) {
+                true -> playerCamera.reset()
+                false, null -> playerCamera.update(frameTime, player.vehicle.gameObject.physicsBody!!.isGrounded)
+
+            }
+
+            renderScene()
+            if(gameStates[GameState.PLAY] == true) renderHUD()
+            if(gameStates[GameState.DEBUG] == true) renderDebugVisuals()
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
@@ -333,8 +337,8 @@ object Game{
 
         var viewMatrix = Matrix4f()
 
-        if(activeGameStates.contains(GameState.PLAY)) viewMatrix = playerCamera.getViewMatrix()
-        else viewMatrix = editCamera.getViewMatrix()
+        viewMatrix = if(gameStates[GameState.PLAY] == true) playerCamera.getViewMatrix()
+        else editCamera.getViewMatrix()
 
         shaderProgram.setUniform("projection", projectionMatrix)
         shaderProgram.setUniform("view", viewMatrix)
@@ -361,8 +365,8 @@ object Game{
         debugShaderProgram.bind()
 
         var viewMatrix = Matrix4f()
-        if(activeGameStates.contains(GameState.PLAY)) viewMatrix = playerCamera.getViewMatrix()
-        else viewMatrix = editCamera.getViewMatrix()
+        viewMatrix = if(gameStates[GameState.PLAY] == true) playerCamera.getViewMatrix()
+        else editCamera.getViewMatrix()
 
         debugShaderProgram.setUniform("projection", projectionMatrix)
         debugShaderProgram.setUniform("view", viewMatrix)
@@ -425,45 +429,48 @@ object Game{
         }
     }
 
-    private fun handleInput(){
-        if(activeGameStates.contains(GameState.PLAY)) {
-            val playerInput = PlayerInput(
-                glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
-            )
-            player.update(FIXED_DELTA_TIME, playerInput)
-            if (framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
-                activeGameStates.remove(GameState.PLAY)
-                activeGameStates.add(GameState.EDITOR)
-                framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
+    private fun handleGlobalInput(){
+
+        if (framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+            if(gameStates[GameState.PLAY] == true){
+                gameStates[GameState.PLAY] = false
+                gameStates[GameState.EDITOR] = true
+            } else{
+                gameStates[GameState.PLAY] = true
+                gameStates[GameState.EDITOR] = false
             }
+            framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
         }
-        else{
-            val isDragging = glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
-            val cameraInput = CameraInput(
-                glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS,
-                glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS,
-                mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
-                mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
-            )
-            editCamera.update(FIXED_DELTA_TIME, cameraInput)
-            if(framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
-                activeGameStates.remove(GameState.EDITOR)
-                activeGameStates.add(GameState.PLAY)
-                framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
-            }
-        }
+
         if(glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS){
-            activeGameStates.remove(GameState.DEBUG) || activeGameStates.add(GameState.DEBUG)
+            gameStates[GameState.DEBUG] = gameStates[GameState.DEBUG] != true
         }
+
         if (framesTilNextModeSwitch > 0) framesTilNextModeSwitch--
+    }
+
+    private fun getPlayerInput(): PlayerInput{
+        return PlayerInput(
+            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
+        )
+    }
+
+    private fun getEditorInput(): CameraInput{
+        val isDragging = glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
+        return CameraInput(
+            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS,
+            glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS,
+            mouseDeltaX = if (isDragging) mouseDeltaX else 0.0f,
+            mouseDeltaY = if (isDragging) mouseDeltaY else 0.0f
+        )
     }
 
     private fun setupMatrices(){
