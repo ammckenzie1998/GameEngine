@@ -1,4 +1,4 @@
-package org.ammck.game.manager
+package org.ammck.game.ui
 
 import org.ammck.engine.assets.Font
 import org.ammck.engine.render.Mesh
@@ -17,7 +17,7 @@ import org.lwjgl.opengl.GL11.glEnable
 import kotlin.math.sqrt
 
 class HudManager(
-    private val vehicle: Vehicle,
+    private var state: HUDState,
     private val shader: ShaderProgram,
     private val projectionMatrix: Matrix4f,
     private val defaultTexture: Texture
@@ -35,36 +35,26 @@ class HudManager(
         shader.setUniform("projection", projectionMatrix)
 
         defaultTexture.bind()
-        drawBar(
-            x = 20f,
-            y = 20f,
-            width = 300f,
-            height = 20f,
-            percentage = vehicle.currentStylePoints / vehicle.MAX_STYLEPOINTS,
-            color = Vector3f(0.5f, 0.5f, 1.0f)
-        )
+        drawBar(x = 20f, y = 20f, width = 300f, height = 20f, percentage = state.stylePercentage, color = Vector3f(0.5f, 0.5f, 1.0f))
+        drawBar(x = 20f, y = 50f, width = 300f, height = 20f, percentage = state.healthPercentage, color = Vector3f(1.0f, 0.5f, 0.5f))
 
-        drawBar(
-            x = 20f,
-            y = 50f,
-            width = 300f,
-            height = 20f,
-            percentage = vehicle.currentHealth / vehicle.MAX_HEALTH,
-            color = Vector3f(1.0f, 0.5f, 0.5f)
-        )
         font.texture.bind()
         shader.setUniform("uAlpha", 1.0f)
 
-        val body = vehicle.gameObject.physicsBody
-        if(body != null){
-            val speed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z) * 3.6f
-            val speedText = "${speed.toInt()} KPH"
-            val rgb = Vector3f(1f, 1f, 1f)
-            font.drawText(speedText, 600f, 50f, rgb, shader, quadMesh)
-        }
+        val speedText = "${state.speedKPH} KPH"
+        val rgb = Vector3f(1f, 1f, 1f)
+        font.drawText(speedText, 600f, 50f, rgb, shader, quadMesh)
+
+        val lapText = "LAP: ${state.currentLap} / ${state.totalLaps}"
+        font.drawText(lapText, 20f, 580f, rgb, shader, quadMesh)
+
+        val posText = "POS: ${state.currentPos} / ${state.totalRacers - state.eliminatedRacers}"
+        font.drawText(posText, 600f, 580f, rgb, shader, quadMesh)
+
+        val elimText = "ELIM: ${state.eliminatedRacers} / ${state.totalRacers}"
+        font.drawText(elimText, 600f, 560f, rgb, shader, quadMesh)
 
         shader.unbind()
-
 
         glDisable(GL_BLEND)
         glEnable(GL_DEPTH_TEST)

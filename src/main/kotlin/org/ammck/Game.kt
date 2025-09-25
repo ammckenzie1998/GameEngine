@@ -6,11 +6,9 @@ import org.ammck.engine.objects.GameObject
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.Transform
-import org.ammck.engine.assets.Asset
 import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
-import org.ammck.engine.objects.LevelLoader
 import org.ammck.game.Player
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
@@ -22,10 +20,9 @@ import org.ammck.game.race.RaceManager
 import org.ammck.game.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
-import org.ammck.game.factory.WorldFactory
-import org.ammck.game.manager.HudManager
+import org.ammck.game.ui.HUDState
+import org.ammck.game.ui.HudManager
 import org.ammck.games.Waypoint
-import org.joml.Math.min
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW.GLFW_FALSE
@@ -76,6 +73,7 @@ import org.lwjgl.opengl.GL11.glEnable
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.system.MemoryUtil
+import kotlin.math.sqrt
 
 object Game{
 
@@ -98,6 +96,8 @@ object Game{
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
     private lateinit var hudShaderProgram: ShaderProgram
+
+    private var hudState: HUDState = HUDState()
     private lateinit var hudManager: HudManager
 
     private lateinit var playerCamera: Camera
@@ -176,7 +176,7 @@ object Game{
         val playerVehicle = VehicleFactory.createVehicle(
             "Player", Transform(SPAWN_POINT), chassisMesh, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
-        hudManager = HudManager(playerVehicle, hudShaderProgram, orthologicalMatrix, defaultTexture)
+        hudManager = HudManager(hudState, hudShaderProgram, orthologicalMatrix, defaultTexture)
 
         val aiPos1 = Transform(position = Vector3f(5f, 1f, -5f))
         val aiPos2 = Transform(position = Vector3f(-5f, 1f, -5f))
@@ -422,6 +422,20 @@ object Game{
     }
 
     private fun renderHUD(){
+        val playerPhysicsBody = player.vehicle.gameObject.physicsBody
+        val v = playerPhysicsBody?.velocity ?: Vector3f()
+        hudState.speedKPH = sqrt(v.x * v.x + v.z * v.z).toInt()
+        hudState.healthPercentage = player.vehicle.currentHealth / player.vehicle.MAX_HEALTH
+        hudState.stylePercentage = player.vehicle.currentStylePoints / player.vehicle.MAX_STYLEPOINTS
+
+        val playerRaceState = raceManager.getRacerState(player.vehicle)
+        hudState.currentLap = playerRaceState?.currentLap ?: 1
+        hudState.totalLaps = raceManager.totalLaps
+
+        hudState.currentPos = raceManager.getRacerPosition(player.vehicle)
+        hudState.totalRacers = raceManager.racers.size
+        hudState.eliminatedRacers = hudState.totalRacers - raceManager.raceState.leaderboard.size
+
         hudManager.draw()
     }
 

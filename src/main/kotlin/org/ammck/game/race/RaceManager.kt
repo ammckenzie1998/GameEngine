@@ -90,4 +90,8 @@ class RaceManager(
     fun getRacerState(vehicle: Vehicle): RacerState?{
         return racerProgress[vehicle]
     }
+
+    fun getRacerPosition(vehicle: Vehicle): Int{
+        return raceState.leaderboard.indexOf(vehicle) + 1
+    }
 }
