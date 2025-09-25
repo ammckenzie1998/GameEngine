@@ -424,7 +424,7 @@ object Game{
     private fun renderHUD(){
         val playerPhysicsBody = player.vehicle.gameObject.physicsBody
         val v = playerPhysicsBody?.velocity ?: Vector3f()
-        hudState.speedKPH = sqrt(v.x * v.x + v.z * v.z).toInt()
+        hudState.speedKPH = (sqrt(v.x * v.x + v.z * v.z) * 3.6 ).toInt()
         hudState.healthPercentage = player.vehicle.currentHealth / player.vehicle.MAX_HEALTH
         hudState.stylePercentage = player.vehicle.currentStylePoints / player.vehicle.MAX_STYLEPOINTS
 
