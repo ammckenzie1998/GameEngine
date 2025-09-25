@@ -36,7 +36,7 @@ class Font(resourcePath: String, fontHeight: Float = 32f) {
         texture = Texture(BITMAP_WIDTH, BITMAP_HEIGHT, bitmap)
     }
 
-    fun drawText(text: String, x: Float, y: Float, color: Vector3f, shader: ShaderProgram, quadMesh: Mesh){
+    fun drawText(text: String, x: Float, y: Float, scale: Float = 1.0f, color: Vector3f, shader: ShaderProgram, quadMesh: Mesh){
         texture.bind()
         shader.setUniform("uColor", color)
 
@@ -53,7 +53,7 @@ class Font(resourcePath: String, fontHeight: Float = 32f) {
                     val height = quad.y1() - quad.y0()
                     val modelMatrix = Matrix4f()
                         .translate(quad.x0(), quad.y0(), 0f)
-                        .scale(width, height, 1f)
+                        .scale(width * scale, height * scale, 1f)
 
                     shader.setUniform("model", modelMatrix)
 

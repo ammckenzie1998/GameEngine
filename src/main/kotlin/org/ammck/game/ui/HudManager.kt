@@ -43,16 +43,16 @@ class HudManager(
 
         val speedText = "${state.speedKPH} KPH"
         val rgb = Vector3f(1f, 1f, 1f)
-        font.drawText(speedText, 600f, 50f, rgb, shader, quadMesh)
+        font.drawText(speedText, 600f, 50f, 1.0f, rgb, shader, quadMesh)
 
         val lapText = "LAP: ${state.currentLap} / ${state.totalLaps}"
-        font.drawText(lapText, 20f, 580f, rgb, shader, quadMesh)
+        font.drawText(lapText, 20f, 580f, 0.75f, rgb, shader, quadMesh)
 
         val posText = "POS: ${state.currentPos} / ${state.totalRacers - state.eliminatedRacers}"
-        font.drawText(posText, 600f, 580f, rgb, shader, quadMesh)
+        font.drawText(posText, 600f, 580f, 0.75f, rgb, shader, quadMesh)
 
         val elimText = "ELIM: ${state.eliminatedRacers} / ${state.totalRacers}"
-        font.drawText(elimText, 600f, 560f, rgb, shader, quadMesh)
+        font.drawText(elimText, 600f, 560f, 0.75f, rgb, shader, quadMesh)
 
         shader.unbind()
 
