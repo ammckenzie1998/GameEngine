@@ -213,7 +213,7 @@ object Game{
 
         physicsEngine.addObjects(*gameObjects.toTypedArray())
 
-        playerCamera = Camera(playerGameObject.transform, distance = 12.0f)
+        playerCamera = Camera(playerGameObject.transform, distance = 10.0f, smoothFactor = 7.0f)
     }
 
     private fun clearWorld(){
