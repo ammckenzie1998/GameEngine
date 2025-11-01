@@ -1,5 +1,6 @@
 package org.ammck.game
 
+import org.ammck.game.components.Vehicle
 import org.ammck.game.race.RaceManager
 import org.joml.Vector3f
 
