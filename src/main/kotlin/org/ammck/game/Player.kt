@@ -1,6 +1,7 @@
 package org.ammck.game
 
 import org.ammck.engine.objects.GameObject
+import org.ammck.game.components.Vehicle
 
 class Player (val vehicle: Vehicle) {
 

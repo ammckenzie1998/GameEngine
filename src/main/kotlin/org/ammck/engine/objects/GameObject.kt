@@ -7,6 +7,7 @@ import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
 import org.ammck.games.Waypoint
 import org.joml.Matrix4f
+import org.joml.Quaternionf
 import org.joml.Vector3f
 
 class GameObject(
@@ -14,7 +15,7 @@ class GameObject(
     val transform: Transform,
     var mesh: Mesh,
     var physicsBody: PhysicsBody? = null,
-    val suspension: Suspension? = null,
+    var suspension: Suspension? = null,
     val waypoint: Waypoint? = null,
 ){
     var parent: GameObject? = null
@@ -35,13 +36,27 @@ class GameObject(
     }
 
     fun update(){
-        localMatrix.identity()
-            .translate(transform.position)
-            .rotate(transform.orientation)
-            .scale(transform.scale)
+        if (parent != null) {
+            val parentPos = parent!!.globalMatrix.getTranslation(Vector3f())
+            val parentRot = parent!!.globalMatrix.getNormalizedRotation(Quaternionf())
+            val parentScale = parent!!.globalMatrix.getScale(Vector3f())
 
-        val parentGlobalMatrix = parent?.globalMatrix ?: Matrix4f().identity()
-        globalMatrix.set(parentGlobalMatrix).mul(localMatrix)
+            val scaledLocalPos = Vector3f(transform.position).mul(parentScale)
+
+            val worldPos = scaledLocalPos.rotate(parentRot).add(parentPos)
+            val worldRot = Quaternionf(parentRot).mul(transform.orientation)
+            val worldScale = Vector3f(transform.scale).mul(parentScale)
+
+            globalMatrix.identity()
+                .translate(worldPos)
+                .rotate(worldRot)
+                .scale(worldScale)
+        } else {
+            globalMatrix.identity()
+                .translate(transform.position)
+                .rotate(transform.orientation)
+                .scale(transform.scale)
+        }
 
         for(child in children){
             child.update()
@@ -51,7 +66,7 @@ class GameObject(
     fun updateMesh(reloadedPaths: List<String>){
        mesh.resourcePath?.let { path ->
             if(reloadedPaths.contains(path)){
-                this.mesh = AssetManager.getMesh(path)
+                this.mesh = AssetManager.getMesh(path).mesh
             }
         }
         for (child in children){

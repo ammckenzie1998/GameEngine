@@ -185,5 +185,37 @@
         [-100, -25, 190]
       ]
     }
-  ]
+  ],
+  "attachmentPoints": {
+    "wheel_fl": {
+      "position": [-80, -20, 150],
+      "rotation": [0, 0, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "wheel_fr": {
+      "position": [80, -20, 150],
+      "rotation": [0, 0, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "wheel_rl": {
+      "position": [-80, -20, -150],
+      "rotation": [0, 0, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "wheel_rr": {
+      "position": [80, -20, -150],
+      "rotation": [0, 0, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "hood_mount": {
+      "position": [0, 40, -110],
+      "rotation": [0, 0, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "roof_mount": {
+      "position": [0, 75, 0],
+      "rotation": [0, 0, 0],
+      "scale": [0.1, 0.1, 0.1]
+    }
+  }
 }

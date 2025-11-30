@@ -1,7 +1,7 @@
 package org.ammck.game.race
 
 import org.ammck.engine.objects.GameObject
-import org.ammck.game.Vehicle
+import org.ammck.game.components.Vehicle
 import org.ammck.game.WaypointType
 
 class RaceManager(

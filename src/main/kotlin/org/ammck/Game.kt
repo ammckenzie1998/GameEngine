@@ -17,7 +17,7 @@ import org.ammck.game.AIController
 import org.ammck.game.GameState
 import org.ammck.game.PlayerInput
 import org.ammck.game.race.RaceManager
-import org.ammck.game.Vehicle
+import org.ammck.game.components.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
 import org.ammck.game.ui.HUDState
@@ -91,7 +91,7 @@ object Game{
     private var currentLevelPath = "levels/level1.amlevel"
 
     private const val MAX_DELTA_TIME = 0.1f
-    private val SPAWN_POINT = Vector3f(0f, 1f, 0f)
+    private val SPAWN_POINT = Vector3f(0f, 20f, 0f)
 
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
@@ -165,16 +165,16 @@ object Game{
     private fun loadLevel(levelPath: String){
         physicsEngine = PhysicsEngine()
 
-        wheelMesh = AssetManager.getMesh("models/wheel.ammodel")
-        val chassisMesh = AssetManager.getMesh("models/car.ammodel")
+        wheelMesh = AssetManager.getMesh("models/wheel.ammodel").mesh
+        val chassisModel = AssetManager.getMesh("models/car.ammodel")
         val groundMesh = defineGround()
-        cubeMesh = AssetManager.getMesh("models/cube.ammodel")
+        cubeMesh = AssetManager.getMesh("models/cube.ammodel").mesh
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
 
         val playerVehicle = VehicleFactory.createVehicle(
-            "Player", Transform(SPAWN_POINT), chassisMesh, wheelMesh)
+            "Player", Transform(SPAWN_POINT), chassisModel, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
         hudManager = HudManager(hudState, hudShaderProgram, orthologicalMatrix, defaultTexture)
 
@@ -184,7 +184,7 @@ object Game{
         val aiTransforms = listOf(aiPos1, aiPos2, aiPos3)
         val aiVehicles = mutableListOf<Vehicle>()
         for (i in 0 until aiTransforms.size) {
-            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], chassisMesh, wheelMesh)
+            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], chassisModel, wheelMesh)
             val aiObject = aiVehicle.gameObject
             aiVehicles.add(aiVehicle)
             gameObjects.add(aiObject)

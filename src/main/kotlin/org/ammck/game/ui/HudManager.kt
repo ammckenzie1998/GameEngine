@@ -4,7 +4,7 @@ import org.ammck.engine.assets.Font
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
-import org.ammck.game.Vehicle
+import org.ammck.game.components.Vehicle
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.opengl.GL11.GL_BLEND

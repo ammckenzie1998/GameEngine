@@ -1,10 +1,9 @@
-package org.ammck.game
+package org.ammck.game.components
 
 import org.ammck.engine.objects.GameObject
-import org.joml.Math.sqrt
+import org.ammck.game.VehicleCommands
 import org.joml.Quaternionf
 import org.joml.Vector3f
-import java.lang.Float.min
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -113,7 +112,7 @@ class Vehicle (val gameObject: GameObject) {
 
         if(bonus > 5) {
             if (gameObject.id == "Player") println("Stunt bonus! Airtime: $currentAirtime, Flips: $fullFlips, Rolls: $fullRolls, Award: $bonus")
-            currentStylePoints = min(MAX_STYLEPOINTS, currentStylePoints + bonus)
+            currentStylePoints = java.lang.Float.min(MAX_STYLEPOINTS, currentStylePoints + bonus)
         }
     }
 
@@ -121,7 +120,7 @@ class Vehicle (val gameObject: GameObject) {
         val body = gameObject.physicsBody!!
         val transform = gameObject.transform
 
-        val currentSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
+        val currentSpeed = org.joml.Math.sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
         if (currentSpeed > MIN_SPEED_TO_TURN) {
             transform.orientation.rotateAxis(-commands.steerDirection * body.turnSpeed * deltaTime, 0f, 1f, 0f)
         }
@@ -140,7 +139,7 @@ class Vehicle (val gameObject: GameObject) {
             body.forces.add(forward.mul(accel * commands.throttle))
         }
 
-        val finalSpeed = sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
+        val finalSpeed = org.joml.Math.sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
         animateWheels(deltaTime, finalSpeed)
     }
 

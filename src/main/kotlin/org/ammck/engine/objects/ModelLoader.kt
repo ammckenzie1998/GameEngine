@@ -1,11 +1,15 @@
 package org.ammck.engine.objects
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import org.ammck.engine.Transform
 import org.ammck.engine.render.Mesh
 import org.ammck.util.FileUtil
 import org.ammck.util.MathUtil
+import org.joml.Quaternionf
+import org.joml.Vector3f
 
 @Serializable
 private data class PolygonData(
@@ -16,17 +20,29 @@ private data class PolygonData(
 )
 
 @Serializable
+private data class AttachmentPointData(
+    val position: List<Float>,
+    val rotation: List<Float>,
+    val scale: List<Float>
+)
+
+@Serializable
 private data class ModelData(
     val name: String,
     val scale: Float = 0.01f,
-    val polygons: List<PolygonData>
+    val polygons: List<PolygonData>,
+    val attachmentPoints: Map<AttachmentType, AttachmentPointData>? = null
 )
 
 object ModelLoader {
 
-    private val jsonParser = Json { ignoreUnknownKeys = true }
+    @OptIn(ExperimentalSerializationApi::class)
+    private val jsonParser = Json {
+        ignoreUnknownKeys = true
+        decodeEnumsCaseInsensitive = true
+    }
 
-    fun load(resourcePath: String): Mesh {
+    fun load(resourcePath: String): Model {
         val fileContent = FileUtil.readResourceAsString(resourcePath)
         val modelData = jsonParser.decodeFromString<ModelData>(fileContent)
         val vertexList = mutableListOf<Float>()
@@ -57,6 +73,29 @@ object ModelLoader {
                 vertexList.addAll(t3)
             }
         }
-        return Mesh(resourcePath, vertexList.toFloatArray())
+
+        val mesh = Mesh(resourcePath, vertexList.toFloatArray())
+
+        val attachmentPoints = mutableMapOf<AttachmentType, Transform>()
+        if(modelData.attachmentPoints != null) {
+
+            for (ap in modelData.attachmentPoints) {
+                val type = ap.key
+                val pos = ap.value.position
+                val positionVector = Vector3f(pos[0], pos[1], pos[2])
+                    .mul(modelData.scale)
+                val rotation = ap.value.rotation
+                val orientation = Quaternionf()
+                    .rotateX(Math.toRadians(rotation[0].toDouble()).toFloat())
+                    .rotateY(Math.toRadians(rotation[1].toDouble()).toFloat())
+                    .rotateZ(Math.toRadians(rotation[2].toDouble()).toFloat())
+                val scale = ap.value.scale
+                val scaleVector = Vector3f(scale[0], scale[1], scale[2])
+                val transform = Transform(positionVector, orientation, scaleVector)
+                attachmentPoints[type] = transform
+            }
+        }
+
+        return Model(mesh, attachmentPoints)
     }
 }
