@@ -83,6 +83,7 @@ object ModelLoader {
                 val type = ap.key
                 val pos = ap.value.position
                 val positionVector = Vector3f(pos[0], pos[1], pos[2])
+                    .mul(modelData.scale)
                 val rotation = ap.value.rotation
                 val orientation = Quaternionf()
                     .rotateX(Math.toRadians(rotation[0].toDouble()).toFloat())

@@ -9,6 +9,7 @@ import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
 import org.ammck.game.components.Vehicle
+import org.joml.Quaternionf
 import org.joml.Vector3f
 
 object VehicleFactory {
@@ -23,9 +24,9 @@ object VehicleFactory {
         val suspensionPositions = mutableListOf<Vector3f>()
         for(ap in wheelAttachmentPoints){
             val wheelTransform = Transform(
-                position = ap.value.position.mul(0.1f, 0.1f, 0.1f),
-                orientation = ap.value.orientation,
-                scale = ap.value.scale
+                position = Vector3f(ap.value.position),
+                orientation = Quaternionf(ap.value.orientation),
+                scale = Vector3f(ap.value.scale)
             )
             println(wheelTransform)
             val wheelObject = GameObject(ap.key.name, wheelTransform, wheelMesh)

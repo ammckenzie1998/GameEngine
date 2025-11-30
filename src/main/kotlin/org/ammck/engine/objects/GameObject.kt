@@ -37,28 +37,21 @@ class GameObject(
 
     fun update(){
         if (parent != null) {
-            // --- THE DEFINITIVE FIX: Decompose and Recompose for Stable Hierarchy ---
-            // 1. Decompose the parent's final global matrix into its core components.
             val parentPos = parent!!.globalMatrix.getTranslation(Vector3f())
             val parentRot = parent!!.globalMatrix.getNormalizedRotation(Quaternionf())
             val parentScale = parent!!.globalMatrix.getScale(Vector3f())
 
-            // 2. Calculate this object's final world position.
-            //    We apply our local position, rotated by the parent's orientation, to the parent's position.
-            //    This calculation is NOT affected by the parent's scale.
-            val worldPos = Vector3f(transform.position).rotate(parentRot).add(parentPos)
+            val scaledLocalPos = Vector3f(transform.position).mul(parentScale)
 
-            // 3. Calculate this object's final world orientation.
+            val worldPos = scaledLocalPos.rotate(parentRot).add(parentPos)
             val worldRot = Quaternionf(parentRot).mul(transform.orientation)
+            val worldScale = Vector3f(transform.scale).mul(parentScale)
 
-            // 4. Calculate this object's final world scale.
-            val worldScale = Vector3f(parentScale).mul(transform.scale)
-
-            // 5. Recompose the final matrix from these correct, stable components.
-            globalMatrix.identity().translate(worldPos).rotate(worldRot).scale(worldScale)
-            // --- END OF FIX ---
+            globalMatrix.identity()
+                .translate(worldPos)
+                .rotate(worldRot)
+                .scale(worldScale)
         } else {
-            // Root objects are simple.
             globalMatrix.identity()
                 .translate(transform.position)
                 .rotate(transform.orientation)
