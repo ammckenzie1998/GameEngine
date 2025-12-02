@@ -16,7 +16,7 @@ object WorldFactory {
         length: Int = 1
     ): List<GameObject>{
         val roadObjects = mutableListOf<GameObject>()
-        val roadMesh = AssetManager.getMesh("models/road_straight.ammodel").mesh
+        val roadMesh = AssetManager.getMesh("models/road_straight.ammodel")
         val angleRadians = Math.toRadians(angle).toFloat()
         val orientation = Quaternionf().rotateY(angleRadians)
         val direction = Vector3f(0f, 0f, -1f).rotate(orientation)
@@ -32,7 +32,7 @@ object WorldFactory {
             val roadObject = GameObject(
                 id = "road",
                 transform = transform,
-                mesh = roadMesh
+                model = roadMesh
             )
             roadObjects.add(roadObject)
         }

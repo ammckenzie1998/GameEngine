@@ -7,7 +7,8 @@ class Player (val vehicle: Vehicle) {
 
     fun update(
         deltaTime: Float,
-        playerInput: PlayerInput
+        playerInput: PlayerInput,
+        onSpawn: (GameObject) -> Unit
     ){
         val throttle = when {
             playerInput.isMoveForwardPressed -> 1.0f
@@ -20,9 +21,10 @@ class Player (val vehicle: Vehicle) {
             else -> 0.0f
         }
         val pitchMode = playerInput.isPitchPressed
+        val fireWeapon = playerInput.isFirePressed
 
-        val commands = VehicleCommands(throttle, steerDirection, pitchMode)
-        vehicle.update(deltaTime, commands)
+        val commands = VehicleCommands(throttle, steerDirection, pitchMode, fireWeapon)
+        vehicle.update(deltaTime, commands, onSpawn)
     }
 
 }

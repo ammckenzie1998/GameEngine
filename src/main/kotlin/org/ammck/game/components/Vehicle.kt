@@ -1,6 +1,7 @@
 package org.ammck.game.components
 
 import org.ammck.engine.objects.GameObject
+import org.ammck.engine.physics.PhysicsBody
 import org.ammck.game.VehicleCommands
 import org.joml.Quaternionf
 import org.joml.Vector3f
@@ -40,7 +41,8 @@ class Vehicle (val gameObject: GameObject) {
 
     fun update(
         deltaTime: Float,
-        vehicleCommands: VehicleCommands
+        vehicleCommands: VehicleCommands,
+        onSpawn: ((GameObject) -> Unit)? = null
     ) {
         val body = gameObject.physicsBody ?: return
 
@@ -71,6 +73,24 @@ class Vehicle (val gameObject: GameObject) {
             animateSteering(deltaTime, vehicleCommands)
             if (body.lastImpactImpulse > 0) applyDamage(body.lastImpactImpulse)
         }
+
+        for(child in gameObject.children){
+            if(child.weapon != null){
+                child.weapon!!.coolDown(deltaTime)
+                if(vehicleCommands.weaponTrigger) {
+                    val projectile = child.weapon!!.fire(child.getWorldTransform(), deltaTime)
+                    if(projectile != null){
+                        val projectileObject = GameObject(
+                            id = "bullet_${System.currentTimeMillis()}",
+                            transform = projectile.transform,
+                            model = projectile.model
+                        )
+                        onSpawn!!(projectileObject)
+                    }
+                }
+            }
+        }
+
         wasAirborne = !body.isGrounded
     }
 

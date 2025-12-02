@@ -9,8 +9,10 @@ import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
 import org.ammck.game.components.Vehicle
+import org.ammck.game.components.Weapon
 import org.joml.Quaternionf
 import org.joml.Vector3f
+import org.lwjgl.opengl.NVMemoryAttachment
 
 object VehicleFactory {
 
@@ -18,9 +20,9 @@ object VehicleFactory {
         val boundingBox = OrientedBoundingBox(initialTransform, Vector3f(2.0f, 1.5f, 4.0f))
         val body = PhysicsBody(boundingBox)
 
-        val gameObject = GameObject(id, initialTransform, chassisModel.mesh, body)
+        val gameObject = GameObject(id, initialTransform, chassisModel, body)
 
-        val wheelAttachmentPoints = chassisModel.attachmentPoints.filterKeys { it.name.startsWith("WHEEL") }
+        val wheelAttachmentPoints = chassisModel.attachmentPoints!!.filterKeys { it.name.startsWith("WHEEL") }
         val suspensionPositions = mutableListOf<Vector3f>()
         for(ap in wheelAttachmentPoints){
             val wheelTransform = Transform(
@@ -29,7 +31,7 @@ object VehicleFactory {
                 scale = Vector3f(ap.value.scale)
             )
             println(wheelTransform)
-            val wheelObject = GameObject(ap.key.name, wheelTransform, wheelMesh)
+            val wheelObject = GameObject(ap.key.name, wheelTransform, Model(wheelMesh, null))
             suspensionPositions.add(ap.value.position)
             gameObject.addChild(wheelObject)
         }
@@ -43,5 +45,14 @@ object VehicleFactory {
         gameObject.suspension = suspension
 
         return Vehicle(gameObject)
+    }
+
+    fun attachWeapon(vehicle: Vehicle, weapon: Weapon, attachmentType: AttachmentType){
+        if(vehicle.gameObject.model.attachmentPoints != null) {
+            val apTransform = vehicle.gameObject.model.attachmentPoints!!.get(attachmentType)
+            val weaponObject = GameObject(attachmentType.toString(), apTransform!!, weapon.model)
+            weaponObject.weapon = weapon
+            vehicle.gameObject.addChild(weaponObject)
+        }
     }
 }

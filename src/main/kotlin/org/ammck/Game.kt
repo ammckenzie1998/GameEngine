@@ -9,6 +9,8 @@ import org.ammck.engine.Transform
 import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
+import org.ammck.engine.objects.AttachmentType
+import org.ammck.engine.objects.Model
 import org.ammck.game.Player
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
@@ -20,6 +22,7 @@ import org.ammck.game.race.RaceManager
 import org.ammck.game.components.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
+import org.ammck.game.factory.WeaponFactory
 import org.ammck.game.ui.HUDState
 import org.ammck.game.ui.HudManager
 import org.ammck.games.Waypoint
@@ -91,7 +94,7 @@ object Game{
     private var currentLevelPath = "levels/level1.amlevel"
 
     private const val MAX_DELTA_TIME = 0.1f
-    private val SPAWN_POINT = Vector3f(0f, 20f, 0f)
+    private val SPAWN_POINT = Vector3f(0f, 1f, 0f)
 
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
@@ -168,7 +171,8 @@ object Game{
         wheelMesh = AssetManager.getMesh("models/wheel.ammodel").mesh
         val chassisModel = AssetManager.getMesh("models/car.ammodel")
         val groundMesh = defineGround()
-        cubeMesh = AssetManager.getMesh("models/cube.ammodel").mesh
+        val cubeModel = AssetManager.getMesh("models/cube.ammodel")
+        cubeMesh = cubeModel.mesh
 
         groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
@@ -195,7 +199,7 @@ object Game{
 
         val ground = createGameObject(
             "Ground",
-            groundMesh,
+            Model(groundMesh, null),
             isStatic = true,
             position=Vector3f(0f,0f,0f),
             boundingBoxSize=null,
@@ -214,6 +218,9 @@ object Game{
         physicsEngine.addObjects(*gameObjects.toTypedArray())
 
         playerCamera = Camera(playerGameObject.transform, distance = 10.0f, smoothFactor = 7.0f)
+
+        val playerWeapon = WeaponFactory.createDefaultGun(cubeModel, cubeModel)
+        VehicleFactory.attachWeapon(playerVehicle, playerWeapon, AttachmentType.ROOF_MOUNT)
     }
 
     private fun clearWorld(){
@@ -253,7 +260,9 @@ object Game{
 
             while(accumulator >= FIXED_DELTA_TIME) {
                 if(gameStates[GameState.PLAY] == true) {
-                    player.update(FIXED_DELTA_TIME, playerInput)
+                    player.update(FIXED_DELTA_TIME, playerInput) {
+                        newObject -> gameObjects.add(newObject)
+                    }
                     for (ai in aiControllers) {
                         ai.update(FIXED_DELTA_TIME)
                     }
@@ -441,7 +450,7 @@ object Game{
 
     private fun drawGameObject(gameObject: GameObject){
         shaderProgram.setUniform("model", gameObject.globalMatrix)
-        gameObject.mesh.draw()
+        gameObject.model.mesh.draw()
         for(child in gameObject.children){
             drawGameObject(child)
         }
@@ -474,6 +483,7 @@ object Game{
             glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
             glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
             glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
+            glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
         )
     }
 
@@ -499,14 +509,14 @@ object Game{
 
     private fun createGameObject (
         id: String,
-        mesh: Mesh,
+        model: Model,
         isStatic: Boolean,
         position: Vector3f,
         boundingBoxSize: Vector3f?,
         waypoint: Waypoint?
     ): GameObject{
         val objectTransform = Transform(position)
-        val gameObject = GameObject(id, transform=objectTransform, mesh=mesh, waypoint=waypoint)
+        val gameObject = GameObject(id, transform=objectTransform, model=model, waypoint=waypoint)
         if(boundingBoxSize != null) {
             val objectBoundingBox = OrientedBoundingBox(objectTransform, boundingBoxSize)
             val objectBody = PhysicsBody(objectBoundingBox, isStatic)
@@ -520,7 +530,7 @@ object Game{
         val checkpoint = Waypoint(WaypointType.RACE_CHECKPOINT, index)
         val result =  createGameObject(
             "Checkpoint$index",
-            checkpointMesh,
+            Model(checkpointMesh, null),
             isStatic = true,
             position=position,
             boundingBoxSize = null,

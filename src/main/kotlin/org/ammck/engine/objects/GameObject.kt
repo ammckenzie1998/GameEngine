@@ -5,6 +5,7 @@ import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
+import org.ammck.game.components.Weapon
 import org.ammck.games.Waypoint
 import org.joml.Matrix4f
 import org.joml.Quaternionf
@@ -13,15 +14,15 @@ import org.joml.Vector3f
 class GameObject(
     var id: String,
     val transform: Transform,
-    var mesh: Mesh,
+    var model: Model,
     var physicsBody: PhysicsBody? = null,
     var suspension: Suspension? = null,
     val waypoint: Waypoint? = null,
+    var weapon: Weapon? = null
 ){
     var parent: GameObject? = null
     var children = mutableListOf<GameObject>()
 
-    val localMatrix = Matrix4f()
     val globalMatrix = Matrix4f()
 
     fun addChild(child: GameObject){
@@ -64,9 +65,9 @@ class GameObject(
     }
 
     fun updateMesh(reloadedPaths: List<String>){
-       mesh.resourcePath?.let { path ->
+       model.mesh.resourcePath?.let { path ->
             if(reloadedPaths.contains(path)){
-                this.mesh = AssetManager.getMesh(path).mesh
+                this.model.mesh = AssetManager.getMesh(path).mesh
             }
         }
         for (child in children){
@@ -76,5 +77,13 @@ class GameObject(
 
     fun getPosition(): Vector3f {
         return this.transform.position
+    }
+
+    fun getWorldTransform(): Transform{
+        return Transform(
+            globalMatrix.getTranslation(Vector3f()),
+            globalMatrix.getNormalizedRotation(Quaternionf()),
+            globalMatrix.getScale(Vector3f())
+        )
     }
 }

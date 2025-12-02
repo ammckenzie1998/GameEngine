@@ -35,7 +35,7 @@ object LevelLoader {
         val objectList = mutableListOf<GameObject>()
 
         for (goData in levelData.gameObjects){
-            val mesh = AssetManager.getMesh(goData.mesh).mesh
+            val mesh = AssetManager.getMesh(goData.mesh)
             var index = 0
             for (pos in goData.positions){
                 val x = pos[0].toFloat()
@@ -53,7 +53,7 @@ object LevelLoader {
                 val gameObject = GameObject(
                     id = goData.name,
                     transform = objectTransform,
-                    mesh = mesh,
+                    model = mesh,
                     waypoint = waypoint
                 )
                 objectList.add(gameObject)

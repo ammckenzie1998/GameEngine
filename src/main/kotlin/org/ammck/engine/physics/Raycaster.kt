@@ -13,7 +13,7 @@ object Raycaster {
     fun castRay(worldRay: Ray, obj: GameObject): RaycastHit?{
         var closestHit = Float.MAX_VALUE
         var intersectionResult: RaycastHit? = null
-        val mesh = obj.mesh
+        val mesh = obj.model.mesh
         val worldToModelMatrix = obj.globalMatrix.invert(Matrix4f())
 
         val modelRayOrigin = worldToModelMatrix.transformPosition(Vector3f(worldRay.origin))
