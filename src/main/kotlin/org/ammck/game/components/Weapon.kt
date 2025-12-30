@@ -27,7 +27,6 @@ class Weapon(
     private var cooldownTime = 0f
 
     fun canFire(currentTime: Float): Boolean{
-        println(cooldownTime)
         return cooldownTime == 0f
     }
 

@@ -9,7 +9,7 @@ object WeaponFactory {
         return Weapon(
             name = "Default",
             fireRate = 1.0f,
-            shotSpeed = 1.0f,
+            shotSpeed = 200.0f,
             damage = 1.0f,
             range = 1.0f,
             shotSize = 1.0f,

@@ -1,6 +1,7 @@
 package org.ammck.game.components
 
 import org.ammck.engine.objects.GameObject
+import org.ammck.engine.physics.OrientedBoundingBox
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.game.VehicleCommands
 import org.joml.Quaternionf
@@ -80,10 +81,16 @@ class Vehicle (val gameObject: GameObject) {
                 if(vehicleCommands.weaponTrigger) {
                     val projectile = child.weapon!!.fire(child.getWorldTransform(), deltaTime)
                     if(projectile != null){
+                        val boundingBox = OrientedBoundingBox(projectile.transform, projectile.transform.scale)
+                        val bulletBody = PhysicsBody(boundingBox)
+                        val carVel = body.velocity
+                        carVel.y = 0f
+                        bulletBody.velocity = Vector3f(projectile.velocity).add(carVel)
                         val projectileObject = GameObject(
                             id = "bullet_${System.currentTimeMillis()}",
                             transform = projectile.transform,
-                            model = projectile.model
+                            model = projectile.model,
+                            physicsBody = bulletBody
                         )
                         onSpawn!!(projectileObject)
                     }
@@ -106,7 +113,6 @@ class Vehicle (val gameObject: GameObject) {
             currentHealth = 0f
             isDestroyed = true
         }
-        if(gameObject.id == "Player") println("Health: $currentHealth")
     }
 
     fun addHealthFlat(healthAmount: Float){
@@ -193,7 +199,7 @@ class Vehicle (val gameObject: GameObject) {
         val distanceTraveled = speed * deltaTime
         val rotationDelta = (distanceTraveled / WHEEL_RADIUS) * rotationDirection
 
-        for(wheel in gameObject.children){
+        for(wheel in gameObject.children.filter { it.id.contains("WHEEL")}){
             wheel.transform.orientation.rotateX(rotationDelta)
         }
     }
@@ -205,10 +211,9 @@ class Vehicle (val gameObject: GameObject) {
             else -> 0.0f
         }
 
-        //First 2 children turn. Should not assume this later on
-        if(gameObject.children.size >= 2){
-            val flWheel = gameObject.children[2]
-            val frWheel = gameObject.children[3]
+        if(gameObject.children.size > 0){
+            val flWheel = gameObject.children.filter { it.id.contains("WHEEL_FL") }[0]
+            val frWheel = gameObject.children.filter { it.id.contains("WHEEL_FR") }[0]
 
             val t = WHEEL_RETURN_TO_ORIGIN_SPEED * deltaTime
             val targetOrientation = Quaternionf().rotateY(targetAngle)

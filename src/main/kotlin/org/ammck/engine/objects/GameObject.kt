@@ -82,7 +82,7 @@ class GameObject(
     fun getWorldTransform(): Transform{
         return Transform(
             globalMatrix.getTranslation(Vector3f()),
-            globalMatrix.getNormalizedRotation(Quaternionf()),
+            globalMatrix.getUnnormalizedRotation(Quaternionf()),
             globalMatrix.getScale(Vector3f())
         )
     }

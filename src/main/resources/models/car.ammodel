@@ -187,22 +187,22 @@
     }
   ],
   "attachmentPoints": {
-    "wheel_fl": {
+    "wheel_rl": {
       "position": [-80, -20, 150],
       "rotation": [0, 0, 0],
       "scale": [0.1, 0.1, 0.1]
     },
-    "wheel_fr": {
+    "wheel_rr": {
       "position": [80, -20, 150],
       "rotation": [0, 0, 0],
       "scale": [0.1, 0.1, 0.1]
     },
-    "wheel_rl": {
+    "wheel_fl": {
       "position": [-80, -20, -150],
       "rotation": [0, 0, 0],
       "scale": [0.1, 0.1, 0.1]
     },
-    "wheel_rr": {
+    "wheel_fr": {
       "position": [80, -20, -150],
       "rotation": [0, 0, 0],
       "scale": [0.1, 0.1, 0.1]

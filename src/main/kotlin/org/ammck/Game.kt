@@ -260,8 +260,9 @@ object Game{
 
             while(accumulator >= FIXED_DELTA_TIME) {
                 if(gameStates[GameState.PLAY] == true) {
-                    player.update(FIXED_DELTA_TIME, playerInput) {
-                        newObject -> gameObjects.add(newObject)
+                    player.update(FIXED_DELTA_TIME, playerInput) { newObject ->
+                        gameObjects.add(newObject)
+                        physicsEngine.addObjects(newObject)
                     }
                     for (ai in aiControllers) {
                         ai.update(FIXED_DELTA_TIME)

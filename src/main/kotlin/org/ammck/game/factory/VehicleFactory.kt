@@ -30,7 +30,6 @@ object VehicleFactory {
                 orientation = Quaternionf(ap.value.orientation),
                 scale = Vector3f(ap.value.scale)
             )
-            println(wheelTransform)
             val wheelObject = GameObject(ap.key.name, wheelTransform, Model(wheelMesh, null))
             suspensionPositions.add(ap.value.position)
             gameObject.addChild(wheelObject)
