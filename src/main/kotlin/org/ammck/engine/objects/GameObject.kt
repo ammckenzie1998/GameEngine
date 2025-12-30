@@ -18,7 +18,8 @@ class GameObject(
     var physicsBody: PhysicsBody? = null,
     var suspension: Suspension? = null,
     val waypoint: Waypoint? = null,
-    var weapon: Weapon? = null
+    var weapon: Weapon? = null,
+    val respawnable: Boolean = true,
 ){
     var parent: GameObject? = null
     var children = mutableListOf<GameObject>()

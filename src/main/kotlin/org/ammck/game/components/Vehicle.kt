@@ -87,7 +87,8 @@ class Vehicle (val gameObject: GameObject) {
                         carVel.y = 0f
                         bulletBody.velocity = Vector3f(projectile.velocity).add(carVel)
                         val projectileObject = GameObject(
-                            id = "bullet_${System.currentTimeMillis()}",
+                            id = "projectile_${System.currentTimeMillis()}",
+                            respawnable = false,
                             transform = projectile.transform,
                             model = projectile.model,
                             physicsBody = bulletBody

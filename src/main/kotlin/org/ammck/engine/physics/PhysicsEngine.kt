@@ -98,7 +98,7 @@ class PhysicsEngine {
         }
 
         //4. Respawn check
-        for (obj in physicsObjects){
+        for (obj in physicsObjects.filter{ it.respawnable }){
             val body = obj.physicsBody ?: continue
             if(!body.isStatic && obj.transform.position.y < RESPAWN_Y_THRESHOLD){
                 obj.transform.position.set(RESPAWN_POSITION)
