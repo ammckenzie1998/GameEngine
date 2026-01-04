@@ -79,14 +79,14 @@ class HudManager(
 
     private fun defineUnitQuadMesh(): Mesh{
         val vertices = floatArrayOf(
-            // Positions        // Colors (tint)     // Texture Coords (UVs)
-            0.0f, 1.0f, 0.0f,   0f, 0f, 0f,          0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f,   0f, 0f, 0f,          1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f,   0f, 0f, 0f,          0.0f, 0.0f,
+            // Positions        // Colors (tint)     // Texture Coords (UVs)   //Normal
+            0.0f, 1.0f, 0.0f,   0f, 0f, 0f,          0.0f, 1.0f,     0f, 1f, 0f,
+            1.0f, 0.0f, 0.0f,   0f, 0f, 0f,          1.0f, 0.0f,     0f, 1f, 0f,
+            0.0f, 0.0f, 0.0f,   0f, 0f, 0f,          0.0f, 0.0f,     0f, 1f, 0f,
 
-            0.0f, 1.0f, 0.0f,   0f, 0f, 0f,          0.0f, 1.0f,
-            1.0f, 1.0f, 0.0f,   0f, 0f, 0f,          1.0f, 1.0f,
-            1.0f, 0.0f, 0.0f,   0f, 0f, 0f,          1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,   0f, 0f, 0f,          0.0f, 1.0f,     0f, 1f, 0f,
+            1.0f, 1.0f, 0.0f,   0f, 0f, 0f,          1.0f, 1.0f,     0f, 1f, 0f,
+            1.0f, 0.0f, 0.0f,   0f, 0f, 0f,          1.0f, 0.0f,     0f, 1f, 0f,
         )
         return Mesh(null, vertices)
     }

@@ -140,7 +140,7 @@ object Game{
 
     private fun init(){
         initWindow()
-        shaderProgram = ShaderProgram("shaders/default.vert", "shaders/default.frag")
+        shaderProgram = ShaderProgram("shaders/cell.vert", "shaders/cell.frag")
         debugShaderProgram = ShaderProgram("shaders/debug.vert", "shaders/debug.frag")
         hudShaderProgram = ShaderProgram("shaders/hud.vert", "shaders/hud.frag")
 
