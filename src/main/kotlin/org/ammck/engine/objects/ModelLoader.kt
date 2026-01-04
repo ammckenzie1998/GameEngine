@@ -10,6 +10,7 @@ import org.ammck.util.FileUtil
 import org.ammck.util.MathUtil
 import org.joml.Quaternionf
 import org.joml.Vector3f
+import java.util.Vector
 
 @Serializable
 private data class PolygonData(
@@ -36,7 +37,8 @@ private data class ModelData(
 
 private data class ObjVertexData(
     val position: List<Float>,
-    val uv: List<Float>
+    val uv: List<Float>,
+    val normal: List<Float>
 )
 
 object ModelLoader {
@@ -58,14 +60,18 @@ object ModelLoader {
     private fun loadObj(resourcePath: String): Model{
         val fileContent = FileUtil.readResourceAsString(resourcePath)
         val fileLines = fileContent.lines()
+        val parentPath = resourcePath.substringBeforeLast('/', "")
 
         val rawVertices = mutableListOf<List<Float>>()
         val rawTexCoords = mutableListOf<List<Float>>()
+        val rawNormals = mutableListOf<List<Float>>()
         val vertexList = mutableListOf<Float>()
 
-        val defaultColor = listOf(1f, 1f, 1f)
+        val socketData = mutableMapOf<String, MutableList<ObjVertexData>>()
+        var currentObjectName = "default"
+        var isSocketObject = false
 
-        val parentPath = resourcePath.substringBeforeLast('/', "")
+        val defaultColor = listOf(1f, 1f, 1f)
         var texturePath: String? = null
 
         for(line in fileLines){
@@ -82,8 +88,15 @@ object ModelLoader {
                     if(textureFileName != null){
                         texturePath = if(parentPath.isEmpty()) textureFileName else "$parentPath/$textureFileName"
                     }
-                    println(texturePath)
+                }
+                "o" -> {
+                    //Object ObjectName
+                    currentObjectName = tokens[1]
+                    isSocketObject = currentObjectName.startsWith("SOCKET_", ignoreCase = true)
 
+                    if (isSocketObject && !socketData.containsKey(currentObjectName)){
+                        socketData[currentObjectName] = mutableListOf()
+                    }
                 }
                 "v" -> {
                     //Vertex v 1.0 1.0 1.0
@@ -100,39 +113,58 @@ object ModelLoader {
                         tokens[2].toFloat()
                     ))
                 }
+                "vn" -> {
+                    rawNormals.add(listOf(
+                        tokens[1].toFloat(),
+                        tokens[2].toFloat(),
+                        tokens[3].toFloat()
+                    ))
+                }
                 "f" -> {
                     //Face f v1/vt1 v2/vt2 v3/vt3
                     val parts = tokens.drop(1)
-                    val v1 = parseObjVertex(parts[0], rawVertices, rawTexCoords)
+                    val v1 = parseObjVertex(parts[0], rawVertices, rawTexCoords, rawNormals)
 
                     for ( i in 1 until parts.size - 1){
-                        val v2 = parseObjVertex(parts[i], rawVertices, rawTexCoords)
-                        val v3 = parseObjVertex(parts[i+1], rawVertices, rawTexCoords)
+                        val v2 = parseObjVertex(parts[i], rawVertices, rawTexCoords, rawNormals)
+                        val v3 = parseObjVertex(parts[i+1], rawVertices, rawTexCoords, rawNormals)
 
-                        vertexList.addAll(v1.position)
-                        vertexList.addAll(defaultColor)
-                        vertexList.addAll(v1.uv)
+                        if (isSocketObject){
+                            socketData[currentObjectName]?.add(v1)
+                            socketData[currentObjectName]?.add(v2)
+                            socketData[currentObjectName]?.add(v3)
+                        } else{
+                            vertexList.addAll(v1.position)
+                            vertexList.addAll(defaultColor)
+                            vertexList.addAll(v1.uv)
+                            vertexList.addAll(v1.normal)
 
-                        vertexList.addAll(v2.position)
-                        vertexList.addAll(defaultColor)
-                        vertexList.addAll(v2.uv)
+                            vertexList.addAll(v2.position)
+                            vertexList.addAll(defaultColor)
+                            vertexList.addAll(v2.uv)
+                            vertexList.addAll(v2.normal)
 
-                        vertexList.addAll(v3.position)
-                        vertexList.addAll(defaultColor)
-                        vertexList.addAll(v3.uv)
+                            vertexList.addAll(v3.position)
+                            vertexList.addAll(defaultColor)
+                            vertexList.addAll(v3.uv)
+                            vertexList.addAll(v3.normal)
+                        }
                     }
                 }
             }
         }
         val mesh = Mesh(resourcePath, vertexList.toFloatArray())
 
-        return Model(mesh, loadJson("models/car.ammodel").attachmentPoints, texturePath)
+        val attachmentPoints = convertSocketsToAttachmentPoints(socketData)
+
+        return Model(mesh, attachmentPoints, texturePath)
     }
 
     private fun parseObjVertex(
         token: String,
         vertices: List<List<Float>>,
-        uvs: List<List<Float>>
+        uvs: List<List<Float>>,
+        normals: List<List<Float>>
     ): ObjVertexData{
         val indices = token.split("/")
 
@@ -147,7 +179,14 @@ object ModelLoader {
             listOf(0f, 0f)
         }
 
-        return ObjVertexData(position, uv)
+        val normal = if (indices.size > 2 && indices[2].isNotEmpty()){
+            val nIndex = indices[2].toInt() - 1
+            normals[nIndex]
+        } else{
+            listOf(0f, 1f, 0f)
+        }
+
+        return ObjVertexData(position, uv, normal)
     }
 
     private fun parseTextureFromMtl(mtlPath: String): String?{
@@ -165,10 +204,49 @@ object ModelLoader {
         }
     }
 
+    private fun convertSocketsToAttachmentPoints(
+        socketData: Map<String, List<ObjVertexData>>
+    ): Map<AttachmentType, Transform>{
+        val attachmentPoints = mutableMapOf<AttachmentType, Transform>()
+
+        for ((name, vertices) in socketData){
+            if (vertices.isEmpty()) continue
+
+            val avgPos = Vector3f(0f, 0f, 0f)
+            val avgNormal = Vector3f(0f, 0f, 0f)
+
+            vertices.forEach { v ->
+                avgPos.add(v.position[0], v.position[1], v.position[2])
+                avgNormal.add(v.normal[0], v.normal[1], v.normal[2])
+            }
+            avgPos.div(vertices.size.toFloat())
+            if (avgNormal.lengthSquared() > 0){
+                avgNormal.normalize()
+            } else{
+                avgNormal.set(0f, 1f, 0f)
+            }
+
+            val rotation = Quaternionf().lookAlong(avgNormal, Vector3f(0f, 1f, 0f))
+
+            val typeName = name.removePrefix("SOCKET_")
+            try{
+                val type = AttachmentType.entries.find { it.name.equals(typeName, ignoreCase = true )}
+                if(type != null){
+                    attachmentPoints[type] = Transform(avgPos, rotation, Vector3f(0.1f))
+                }
+            } catch(e: Exception){
+                println("WARNING - Could not map socket object '$name' to an attachment type")
+            }
+        }
+        return attachmentPoints
+    }
+
     private fun loadJson(resourcePath: String): Model {
         val fileContent = FileUtil.readResourceAsString(resourcePath)
         val modelData = jsonParser.decodeFromString<ModelData>(fileContent)
         val vertexList = mutableListOf<Float>()
+
+        val defaultNormal = listOf(0f, 1f, 0f)
 
         for(polygon in modelData.polygons){
             val r = polygon.color[0] / 255f
@@ -188,12 +266,15 @@ object ModelLoader {
                 vertexList.addAll(MathUtil.scaleFloats(modelData.scale,v1))
                 vertexList.addAll(colorData)
                 vertexList.addAll(t1)
+                vertexList.addAll(defaultNormal)
                 vertexList.addAll(MathUtil.scaleFloats(modelData.scale,v2))
                 vertexList.addAll(colorData)
                 vertexList.addAll(t2)
+                vertexList.addAll(defaultNormal)
                 vertexList.addAll(MathUtil.scaleFloats(modelData.scale,v3))
                 vertexList.addAll(colorData)
                 vertexList.addAll(t3)
+                vertexList.addAll(defaultNormal)
             }
         }
 

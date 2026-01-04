@@ -27,16 +27,19 @@ class Mesh (val resourcePath: String?, val vertices: FloatArray) {
         private const val POSITION_ATTRIBUTE_LOCATION = 0
         private const val COLOR_ATTRIBUTE_LOCATION = 1
         private const val TEX_COORD_ATTRIBUTE_LOCATION = 2
+        private const val NORMAL_ATTRIBUTE_LOCATION = 3
 
         private const val POSITION_COMPONENTS = 3 // x, y, z
         private const val COLOR_COMPONENTS = 3 // r, g, b
         private const val TEX_COORD_COMPONENTS = 2 // u, v
+        private const val NORMAL_COMPONENTS = 3 // x, y, z
 
-        private const val VERTEX_FLOAT_COUNT = POSITION_COMPONENTS + COLOR_COMPONENTS + TEX_COORD_COMPONENTS
+        private const val VERTEX_FLOAT_COUNT = POSITION_COMPONENTS + COLOR_COMPONENTS + TEX_COORD_COMPONENTS + NORMAL_COMPONENTS
         private const val STRIDE = VERTEX_FLOAT_COUNT * Float.SIZE_BYTES
 
         private const val COLOR_OFFSET = (POSITION_COMPONENTS * Float.SIZE_BYTES).toLong()
         private const val TEX_COORD_OFFSET = ((POSITION_COMPONENTS + COLOR_COMPONENTS) * Float.SIZE_BYTES).toLong()
+        private const val NORMAL_OFFSET = ((POSITION_COMPONENTS + COLOR_COMPONENTS + TEX_COORD_COMPONENTS) * Float.SIZE_BYTES).toLong()
 
     }
 
@@ -79,6 +82,16 @@ class Mesh (val resourcePath: String?, val vertices: FloatArray) {
             TEX_COORD_OFFSET
         )
         glEnableVertexAttribArray(TEX_COORD_ATTRIBUTE_LOCATION)
+
+        glVertexAttribPointer(
+            NORMAL_ATTRIBUTE_LOCATION,
+            NORMAL_COMPONENTS,
+            GL_FLOAT,
+            false,
+            STRIDE,
+            NORMAL_OFFSET
+        )
+        glEnableVertexAttribArray(NORMAL_ATTRIBUTE_LOCATION)
     }
 
     fun draw(){

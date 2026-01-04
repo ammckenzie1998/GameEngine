@@ -547,14 +547,14 @@ object Game{
 
     private fun defineGround(): Mesh{
         val groundVertices = floatArrayOf(
-            // Positions          // Colors (tint)     // Texture Coords (UVs)
-            -500.0f, 0f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,
-            500.0f, 0f, -500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,
-            500.0f, 0f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
+            // Positions          // Colors (tint)     // Texture Coords (UVs), //Normals
+            -500.0f, 0f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,   0f, 1f, 0f,
+            500.0f, 0f, -500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 25.0f,   0f, 1f, 0f,
+            500.0f, 0f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,   0f, 1f, 0f,
 
-            500.0f, 0f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,
-            -500.0f, 0f,  500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-            -500.0f, 0f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f
+            500.0f, 0f,  500.0f,   1.0f, 1.0f, 1.0f,  25.0f, 0.0f,   0f, 1f, 0f,
+            -500.0f, 0f,  500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0f, 1f, 0f,
+            -500.0f, 0f, -500.0f,  1.0f, 1.0f, 1.0f,   0.0f, 25.0f,   0f, 1f, 0f
         )
         return Mesh(null, groundVertices)
     }
