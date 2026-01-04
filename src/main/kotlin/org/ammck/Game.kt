@@ -117,7 +117,8 @@ object Game{
 
     private lateinit var raceManager: RaceManager
 
-    private lateinit var groundTexture: Texture
+    //TO DO - this should be moved to asset manager
+    private val textureMap = mutableMapOf<String, Texture>()
     private lateinit var defaultTexture: Texture
 
     private val projectionMatrix = Matrix4f()
@@ -170,15 +171,14 @@ object Game{
 
         wheelMesh = AssetManager.getMesh("models/wheel.ammodel").mesh
         val chassisModel = AssetManager.getMesh("models/car.ammodel")
-        val groundMesh = defineGround()
+        val newChassisModel = AssetManager.getMesh("models/stallion.obj")
         val cubeModel = AssetManager.getMesh("models/cube.ammodel")
         cubeMesh = cubeModel.mesh
 
-        groundTexture = Texture("textures/grass.png")
         defaultTexture = Texture("textures/default.png")
 
         val playerVehicle = VehicleFactory.createVehicle(
-            "Player", Transform(SPAWN_POINT), chassisModel, wheelMesh)
+            "Player", Transform(SPAWN_POINT), newChassisModel, wheelMesh)
         val playerGameObject = playerVehicle.gameObject
         hudManager = HudManager(hudState, hudShaderProgram, orthologicalMatrix, defaultTexture)
 
@@ -197,9 +197,10 @@ object Game{
         player = Player(playerVehicle)
         gameObjects.add(playerGameObject)
 
+        val groundMesh = defineGround()
         val ground = createGameObject(
             "Ground",
-            Model(groundMesh, null),
+            Model(groundMesh, null, "textures/grass.png"),
             isStatic = true,
             position=Vector3f(0f,0f,0f),
             boundingBoxSize=null,
@@ -219,8 +220,8 @@ object Game{
 
         playerCamera = Camera(playerGameObject.transform, distance = 10.0f, smoothFactor = 7.0f)
 
-        val playerWeapon = WeaponFactory.createDefaultGun(cubeModel, cubeModel)
-        VehicleFactory.attachWeapon(playerVehicle, playerWeapon, AttachmentType.ROOF_MOUNT)
+//        val playerWeapon = WeaponFactory.createDefaultGun(cubeModel, cubeModel)
+//        VehicleFactory.attachWeapon(playerVehicle, playerWeapon, AttachmentType.ROOF_MOUNT)
     }
 
     private fun clearWorld(){
@@ -309,7 +310,6 @@ object Game{
     private fun destroy(){
         shaderProgram.cleanup()
         AssetManager.cleanup()
-        groundTexture.cleanup()
         defaultTexture.cleanup()
         hudManager.cleanup()
 
@@ -359,13 +359,6 @@ object Game{
         shaderProgram.setUniform("textureSampler", 0)
 
         for(gameObject in gameObjects){
-            if(gameObject.id == "Ground"){
-                glActiveTexture(GL_TEXTURE0)
-                groundTexture.bind()
-            } else{
-                glActiveTexture(GL_TEXTURE0)
-                defaultTexture.bind()
-            }
             drawGameObject(gameObject)
         }
 
@@ -450,11 +443,24 @@ object Game{
     }
 
     private fun drawGameObject(gameObject: GameObject){
+        glActiveTexture(GL_TEXTURE0)
+
+        val texturePath = gameObject.model.texturePath
+        if(texturePath != null){
+            getTexture(texturePath).bind()
+        } else{
+            defaultTexture.bind()
+        }
+
         shaderProgram.setUniform("model", gameObject.globalMatrix)
         gameObject.model.mesh.draw()
         for(child in gameObject.children){
             drawGameObject(child)
         }
+    }
+
+    private fun getTexture(path: String): Texture{
+        return textureMap.getOrPut(path) { Texture(path) }
     }
 
     private fun handleGlobalInput(){
