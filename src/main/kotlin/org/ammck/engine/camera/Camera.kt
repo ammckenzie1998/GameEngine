@@ -30,6 +30,7 @@ class Camera (
             targetOrientation.set(targetTransform.orientation)
         }
         val forwardDirection = Vector3f(0f, 0f, -1f).rotate(targetOrientation)
+        forwardDirection.y = 0.0f
 
         desiredPosition.set(targetPosition)
             .sub(forwardDirection.mul(distance))
