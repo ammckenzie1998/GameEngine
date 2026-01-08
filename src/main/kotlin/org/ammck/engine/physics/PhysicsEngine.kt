@@ -44,8 +44,12 @@ class PhysicsEngine {
                         suspension ->  applySuspensionForces(obj, physicsBody, suspension)
                 }
                 physicsBody.forces.add(GRAVITY_FORCE)
+
                 val acceleration = Vector3f(physicsBody.forces).mul(physicsBody.inverseMass)
                 physicsBody.velocity.add(acceleration.mul(deltaTime))
+
+                val angularAcceleration = Vector3f(physicsBody.torques).mul(physicsBody.inverseInertia)
+                physicsBody.angularVelocity.add(angularAcceleration.mul(deltaTime))
             }
         }
 
@@ -64,10 +68,13 @@ class PhysicsEngine {
                         body.angularVelocity,
                         body.angularVelocity.length() * deltaTime
                     )
-                    obj.transform.orientation.mul(deltaRotation).normalize()
+                    deltaRotation.mul(obj.transform.orientation, obj.transform.orientation)
+                    obj.transform.orientation.normalize()
                 }
             }
+            resolveChassisCollision(obj)
             body.forces.set(0f, 0f, 0f)
+            body.torques.set(0f, 0f, 0f)
         }
 
         //3. Collisions
@@ -161,47 +168,103 @@ class PhysicsEngine {
         }
     }
 
+    //TEMPORARY METHOD TO PREVENT FALLING THROUGH GROUND ON BAD LANDING - TO BE REPLACED
+    private fun resolveChassisCollision(obj: GameObject) {
+        val body = obj.physicsBody ?: return
+        val chassisRadius = 0.3f
+        val ray = Ray(obj.transform.position, Vector3f(0f, -1f, 0f))
+
+        for(worldObj in worldObjects) {
+            val hit = Raycaster.castRay(ray, worldObj)
+
+            if (hit != null && hit.distance < chassisRadius) {
+                val penetration = chassisRadius - hit.distance
+                val correction = Vector3f(0f, 1f, 0f).mul(penetration)
+                obj.transform.position.add(correction)
+
+                if (body.velocity.y < 0) {
+                    body.velocity.y = 0f
+                }
+                body.isGrounded = true
+
+                body.velocity.x *= 0.99f
+                body.velocity.z *= 0.99f
+            }
+        }
+    }
+
     private fun applySuspensionForces(gameObject: GameObject, body: PhysicsBody, suspension: Suspension){
         var groundedWheels = 0
         var combinedNormal = Vector3f()
         val rotationMatrix = Matrix3f().set(gameObject.transform.orientation)
 
-        val wheelColors = listOf(
+        val wheelDebugColors = listOf(
             Vector3f(1f, 0f, 0f),
             Vector3f(0f, 1f, 0f),
             Vector3f(0f, 0f, 1f),
             Vector3f(0f, 1f, 1f)
         )
 
+        val offsets = listOf(
+            Vector3f(0f, 0f, 0f),
+            Vector3f(0.3f, 0f, 0f),
+            Vector3f(-0.3f, 0f, 0f),
+            Vector3f(0f, 0f, 0.3f),
+            Vector3f(0f, 0f, -0.3f),
+        )
+
         for (i in 0 until suspension.wheelPositions.size){
             val wheelPos = suspension.wheelPositions[i]
             val wheelWorldPos = Vector3f(wheelPos).mul(rotationMatrix).add(gameObject.transform.position)
-            val ray = Ray(wheelWorldPos, Vector3f(0f, -1f, 0f))
             var closestHit: RaycastHit? = null
+            var ray: Ray? = null
 
-            for(obj in worldObjects){
-                val hit = Raycaster.castRay(ray, obj)
-                if (hit != null && (closestHit == null || hit.distance < closestHit.distance)){
-                    closestHit = hit
+            for(o in offsets){
+                val rotatedOffset = Vector3f(o).mul(rotationMatrix)
+                val offsetPosition = Vector3f(wheelWorldPos).add(rotatedOffset)
+                val rayDir = Vector3f(0f, -1f, 0f).mul(rotationMatrix).normalize()
+                val rayOrigin = Vector3f(offsetPosition)
+                val r = Ray(rayOrigin, rayDir)
+
+                for(obj in worldObjects){
+                    val hit = Raycaster.castRay(r, obj)
+                    if (hit != null && (closestHit == null || hit.distance < closestHit.distance)){
+                        closestHit = hit
+                        ray = r
+                        if(obj.id != "Ground" && obj.id != "Road") println(obj.id)
+                    }
+                    debugRaycastResults.add(DebugRaycast(r, closestHit, wheelDebugColors[i]))
                 }
             }
 
-            debugRaycastResults.add(DebugRaycast(ray, closestHit, wheelColors[i]))
+            if (closestHit != null && ray != null){
+                val distance = closestHit.distance
+                if(distance < suspension.height && distance >= 0) {
+                    groundedWheels++
+                    if (closestHit.normal.dot(ray.direction) > 0) {
+                        closestHit.normal.negate()
+                    }
+                    combinedNormal.add(closestHit.normal)
 
-            if (closestHit != null && closestHit.distance < suspension.height){
-                groundedWheels ++
-                if(closestHit.normal.dot(ray.direction) > 0){
-                    closestHit.normal.negate()
+                    val compression = suspension.height - distance
+                    val springForce = compression * suspension.stiffness
+                    val springDir = Vector3f(ray.direction).negate()
+
+                    val arm = Vector3f(wheelPos).mul(rotationMatrix)
+                    val pointVelocity = Vector3f()
+                    body.angularVelocity.cross(arm, pointVelocity)
+                    pointVelocity.add(body.velocity)
+                    val velocityAlongNormal = pointVelocity.dot(springDir)
+
+                    val dampingForce = velocityAlongNormal * suspension.damping
+                    val suspensionForce = springForce - dampingForce
+                    val suspensionForceVector = springDir.mul(suspensionForce)
+                    body.forces.add(suspensionForceVector)
+
+                    val torque = Vector3f()
+                    arm.cross(suspensionForceVector, torque)
+                    body.torques.add(torque)
                 }
-                combinedNormal.add(closestHit.normal)
-
-                val compression = suspension.height - closestHit.distance
-                val springForce = compression * suspension.stiffness
-                val velocityAlongNormal = body.velocity.dot(closestHit.normal)
-                val dampingForce = velocityAlongNormal * suspension.damping
-                val suspensionForce = springForce - dampingForce
-                val suspensionForceVector = Vector3f(closestHit.normal).mul(suspensionForce)
-                body.forces.add(suspensionForceVector)
             }
         }
         if(groundedWheels > 0){
@@ -211,6 +274,8 @@ class PhysicsEngine {
             } else{
                 body.groundNormal.set(0f, 1f, 0f)
             }
+        } else{
+            body.groundNormal.set(0f, 1f, 0f)
         }
     }
 

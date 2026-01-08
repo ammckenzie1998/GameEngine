@@ -43,7 +43,7 @@ object VehicleFactory {
             wheelPositions = suspensionPositions,
             stiffness = 150f,
             damping = 15f,
-            height = 0.5f
+            height = 0.3f
         )
         gameObject.suspension = suspension
 

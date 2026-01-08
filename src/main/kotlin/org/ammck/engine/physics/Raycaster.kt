@@ -54,9 +54,14 @@ object Raycaster {
                     closestHit = distToIntersectPoint
                     val hitPointModel = Vector3f(modelRay.origin).add(Vector3f(modelRay.direction).mul(distToIntersectPoint))
                     val hitPointWorld = obj.globalMatrix.transformPosition(hitPointModel)
-                    val normalWorld = obj.globalMatrix.transformDirection(
-                        Vector3f(edge1).cross(edge2)
-                    ).normalize()
+
+                    val normalMatrix = worldToModelMatrix.transpose(Matrix4f())
+                    val faceNormal = Vector3f(edge1).cross(edge2)
+
+                    val normalWorld = Vector3f()
+                    normalMatrix.transformDirection(faceNormal, normalWorld)
+                    normalWorld.normalize()
+
                     val worldDistance = worldRay.origin.distance(hitPointWorld)
 
                     intersectionResult = RaycastHit(worldDistance, hitPointWorld, normalWorld)

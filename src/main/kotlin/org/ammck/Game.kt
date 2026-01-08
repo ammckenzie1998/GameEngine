@@ -187,12 +187,12 @@ object Game{
         val aiPos3 = Transform(position = Vector3f(0f, 1f, -10f))
         val aiTransforms = listOf(aiPos1, aiPos2, aiPos3)
         val aiVehicles = mutableListOf<Vehicle>()
-        for (i in 0 until aiTransforms.size) {
-            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], chassisModel, wheelMesh)
-            val aiObject = aiVehicle.gameObject
-            aiVehicles.add(aiVehicle)
-            gameObjects.add(aiObject)
-        }
+//        for (i in 0 until aiTransforms.size) {
+//            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], chassisModel, wheelMesh)
+//            val aiObject = aiVehicle.gameObject
+//            aiVehicles.add(aiVehicle)
+//            gameObjects.add(aiObject)
+//        }
 
         player = Player(playerVehicle)
         gameObjects.add(playerGameObject)
