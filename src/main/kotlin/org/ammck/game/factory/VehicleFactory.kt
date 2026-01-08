@@ -13,11 +13,15 @@ import org.ammck.game.components.Weapon
 import org.joml.Quaternionf
 import org.joml.Vector3f
 import org.lwjgl.opengl.NVMemoryAttachment
+import kotlin.math.abs
 
 object VehicleFactory {
 
     fun createVehicle(id: String, initialTransform: Transform, chassisModel: Model, wheelMesh: Mesh): Vehicle {
-        val boundingBox = OrientedBoundingBox(initialTransform, Vector3f(2.0f, 1.5f, 4.0f))
+        val width = chassisModel.upperBounds.x + abs(chassisModel.lowerBounds.x)
+        val height = chassisModel.upperBounds.y + abs(chassisModel.lowerBounds.y)
+        val length = chassisModel.upperBounds.z + abs(chassisModel.lowerBounds.z)
+        val boundingBox = OrientedBoundingBox(initialTransform, Vector3f(width, height, length))
         val body = PhysicsBody(boundingBox)
 
         val gameObject = GameObject(id, initialTransform, chassisModel, body)

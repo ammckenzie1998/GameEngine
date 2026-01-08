@@ -11,6 +11,8 @@ import org.ammck.util.MathUtil
 import org.joml.Quaternionf
 import org.joml.Vector3f
 import java.util.Vector
+import kotlin.math.max
+import kotlin.math.min
 
 @Serializable
 private data class PolygonData(
@@ -67,6 +69,9 @@ object ModelLoader {
         val rawNormals = mutableListOf<List<Float>>()
         val vertexList = mutableListOf<Float>()
 
+        val lowerBounds = Vector3f(0f, 0f, 0f)
+        val upperBounds = Vector3f(0f, 0f, 0f)
+
         val socketData = mutableMapOf<String, MutableList<ObjVertexData>>()
         var currentObjectName = "default"
         var isSocketObject = false
@@ -105,6 +110,10 @@ object ModelLoader {
                         tokens[2].toFloat(),
                         tokens[3].toFloat()
                     ))
+                    updateUpperAndLowerBounds(
+                        upperBounds,
+                        lowerBounds,
+                        Vector3f(tokens[1].toFloat(), tokens[2].toFloat(), tokens[3].toFloat()))
                 }
                 "vt" -> {
                     //Texture vt 0.5 0.5
@@ -157,7 +166,21 @@ object ModelLoader {
 
         val attachmentPoints = convertSocketsToAttachmentPoints(socketData)
 
-        return Model(mesh, attachmentPoints, texturePath)
+        return Model(mesh, attachmentPoints, texturePath, upperBounds, lowerBounds)
+    }
+
+    private fun updateUpperAndLowerBounds(
+        upperBoundVector: Vector3f,
+        lowerBoundVector: Vector3f,
+        newValues: Vector3f){
+
+        upperBoundVector.x = max(upperBoundVector.x, newValues.x)
+        upperBoundVector.y = max(upperBoundVector.y, newValues.y)
+        upperBoundVector.z = max(upperBoundVector.z, newValues.z)
+
+        lowerBoundVector.x = min(lowerBoundVector.x, newValues.x)
+        lowerBoundVector.y = min(lowerBoundVector.y, newValues.y)
+        lowerBoundVector.z = min(lowerBoundVector.z, newValues.z)
     }
 
     private fun parseObjVertex(
