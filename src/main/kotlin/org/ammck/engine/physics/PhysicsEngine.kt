@@ -6,6 +6,8 @@ import org.joml.Matrix3f
 import org.joml.Quaternionf
 import org.joml.Vector3f
 import java.util.Vector
+import kotlin.math.abs
+import kotlin.math.sign
 
 data class DebugRaycast(val ray: Ray, val hit: RaycastHit?, val color: Vector3f)
 
@@ -57,8 +59,15 @@ class PhysicsEngine {
         for (obj in physicsObjects){
             val body = obj.physicsBody ?: continue
             if(!body.isStatic){
-                if (body.velocity.x != 0.0f && body.isGrounded) body.velocity.x *= body.linearDrag
-                if (body.velocity.z != 0.0f && body.isGrounded) body.velocity.z *= body.linearDrag
+                if (body.isGrounded){
+                    val inverseRotation = Quaternionf(obj.transform.orientation).conjugate()
+                    val localVelocity = Vector3f(body.velocity).rotate(inverseRotation)
+
+                    localVelocity.z *= body.linearDrag
+                    localVelocity.x *= body.lateralGrip
+
+                    body.velocity.set(localVelocity.rotate(obj.transform.orientation))
+                }
                 body.angularVelocity.mul(body.angularDrag)
 
                 obj.transform.position.add(Vector3f(body.velocity).mul(deltaTime))
@@ -71,6 +80,46 @@ class PhysicsEngine {
                     deltaRotation.mul(obj.transform.orientation, obj.transform.orientation)
                     obj.transform.orientation.normalize()
                 }
+
+                val acceleration = Vector3f(body.velocity).sub(body.previousVelocity).div(deltaTime)
+                val inverseOrientation = Quaternionf(obj.transform.orientation).conjugate()
+                val localAccel = acceleration.rotate(inverseOrientation)
+
+                var pitchForce = localAccel.z
+                if(pitchForce > 0){
+                    val dragThreshold = 50.0f
+                    pitchForce = (pitchForce - dragThreshold).coerceAtLeast(0f)
+                } else{
+                    pitchForce *= 1.0f
+                }
+
+                var lateralForce = localAccel.x
+                val lateralDeadzone = 30.0f
+
+                if (abs(lateralForce) < lateralDeadzone){
+                    lateralForce = 0.0f
+                } else{
+                    lateralForce -= sign(lateralForce) * lateralDeadzone
+                }
+
+                body.previousVelocity.set(body.velocity)
+
+                val maxBodyRoll = 0.15f
+                val rollSensitivity = 0.05f
+                val targetBodyRoll = (lateralForce * rollSensitivity).coerceIn(-maxBodyRoll, maxBodyRoll)
+
+                val maxBodyPitch = 0.10f
+                val pitchSensitivity = -0.01f
+                val targetBodyPitch = (pitchForce * pitchSensitivity).coerceIn(-maxBodyPitch, maxBodyPitch)
+
+                val targetVisualRot = Quaternionf()
+                    .rotateX(targetBodyPitch)
+                    .rotateZ(targetBodyRoll)
+
+                val isCentering = abs(targetBodyRoll) < 0.01f
+                val rollSpeed = if(isCentering) 10.0f else 4.0f
+
+                obj.visualOrientation.slerp(targetVisualRot, rollSpeed * deltaTime)
             }
             resolveChassisCollision(obj)
             body.forces.set(0f, 0f, 0f)
@@ -187,8 +236,8 @@ class PhysicsEngine {
                 }
                 body.isGrounded = true
 
-                body.velocity.x *= 0.99f
-                body.velocity.z *= 0.99f
+                body.velocity.x *= 0.998f
+                body.velocity.z *= 0.998f
             }
         }
     }
@@ -231,7 +280,6 @@ class PhysicsEngine {
                     if (hit != null && (closestHit == null || hit.distance < closestHit.distance)){
                         closestHit = hit
                         ray = r
-                        if(obj.id != "Ground" && obj.id != "Road") println(obj.id)
                     }
                     debugRaycastResults.add(DebugRaycast(r, closestHit, wheelDebugColors[i]))
                 }

@@ -35,6 +35,7 @@ object VehicleFactory {
                 scale = Vector3f(ap.value.scale)
             )
             val wheelObject = GameObject(ap.key.name, wheelTransform, Model(wheelMesh, null))
+            wheelObject.attachVisualsToParent = false
             suspensionPositions.add(ap.value.position)
             gameObject.addChild(wheelObject)
         }

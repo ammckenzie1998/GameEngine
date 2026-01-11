@@ -62,17 +62,23 @@ import org.lwjgl.glfw.GLFW.glfwTerminate
 import org.lwjgl.glfw.GLFW.glfwWindowHint
 import org.lwjgl.glfw.GLFW.glfwWindowShouldClose
 import org.lwjgl.opengl.GL.createCapabilities
+import org.lwjgl.opengl.GL11.GL_BACK
 import org.lwjgl.opengl.GL11.GL_BLEND
 import org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT
+import org.lwjgl.opengl.GL11.GL_CULL_FACE
 import org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT
 import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
+import org.lwjgl.opengl.GL11.GL_FRONT
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
+import org.lwjgl.opengl.GL11.GL_POLYGON_OFFSET_FILL
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 import org.lwjgl.opengl.GL11.glBlendFunc
 import org.lwjgl.opengl.GL11.glClear
 import org.lwjgl.opengl.GL11.glClearColor
+import org.lwjgl.opengl.GL11.glCullFace
 import org.lwjgl.opengl.GL11.glDisable
 import org.lwjgl.opengl.GL11.glEnable
+import org.lwjgl.opengl.GL11.glPolygonOffset
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.system.MemoryUtil
@@ -99,6 +105,7 @@ object Game{
     private lateinit var shaderProgram: ShaderProgram
     private lateinit var debugShaderProgram: ShaderProgram
     private lateinit var hudShaderProgram: ShaderProgram
+    private lateinit var outlineShaderProgram: ShaderProgram
 
     private var hudState: HUDState = HUDState()
     private lateinit var hudManager: HudManager
@@ -143,6 +150,7 @@ object Game{
         shaderProgram = ShaderProgram("shaders/cell.vert", "shaders/cell.frag")
         debugShaderProgram = ShaderProgram("shaders/debug.vert", "shaders/debug.frag")
         hudShaderProgram = ShaderProgram("shaders/hud.vert", "shaders/hud.frag")
+        outlineShaderProgram = ShaderProgram("shaders/outline.vert", "shaders/outline.frag")
 
         setupMatrices()
 
@@ -218,7 +226,7 @@ object Game{
 
         physicsEngine.addObjects(*gameObjects.toTypedArray())
 
-        playerCamera = Camera(playerGameObject.transform, distance = 10.0f, smoothFactor = 7.0f)
+        playerCamera = Camera(playerGameObject.transform, distance = 9.0f, smoothFactor = 9.0f)
 
 //        val playerWeapon = WeaponFactory.createDefaultGun(cubeModel, cubeModel)
 //        VehicleFactory.attachWeapon(playerVehicle, playerWeapon, AttachmentType.ROOF_MOUNT)
@@ -347,16 +355,20 @@ object Game{
 
     private fun renderScene(){
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
-        shaderProgram.bind()
 
-        var viewMatrix = Matrix4f()
-
-        viewMatrix = if(gameStates[GameState.PLAY] == true) playerCamera.getViewMatrix()
+        val viewMatrix =  if(gameStates[GameState.PLAY] == true) playerCamera.getViewMatrix()
         else editCamera.getViewMatrix()
 
+        shaderProgram.bind()
         shaderProgram.setUniform("projection", projectionMatrix)
         shaderProgram.setUniform("view", viewMatrix)
         shaderProgram.setUniform("textureSampler", 0)
+
+        outlineShaderProgram.bind()
+        outlineShaderProgram.setUniform("projection", projectionMatrix)
+        outlineShaderProgram.setUniform("view", viewMatrix)
+
+        shaderProgram.bind()
 
         for(gameObject in gameObjects){
             drawGameObject(gameObject)
@@ -443,6 +455,8 @@ object Game{
     }
 
     private fun drawGameObject(gameObject: GameObject){
+        shaderProgram.bind()
+
         glActiveTexture(GL_TEXTURE0)
 
         val texturePath = gameObject.model.texturePath
@@ -454,6 +468,26 @@ object Game{
 
         shaderProgram.setUniform("model", gameObject.globalMatrix)
         gameObject.model.mesh.draw()
+
+        if(gameObject.id == "Player") {
+            glEnable(GL_CULL_FACE)
+            glCullFace(GL_FRONT)
+            glEnable(GL_POLYGON_OFFSET_FILL)
+            glPolygonOffset(1.0f, 1.0f)
+
+            outlineShaderProgram.bind()
+            outlineShaderProgram.setUniform("model", gameObject.globalMatrix)
+            outlineShaderProgram.setUniform("outlineWidth", 0.05f)
+            outlineShaderProgram.setUniform("outlineColor", Vector3f(0.0f, 0.0f, 0.0f))
+            gameObject.model.mesh.draw()
+
+            outlineShaderProgram.unbind()
+            glDisable(GL_POLYGON_OFFSET_FILL)
+            glDisable(GL_CULL_FACE)
+            glCullFace(GL_BACK)
+
+        }
+
         for(child in gameObject.children){
             drawGameObject(child)
         }

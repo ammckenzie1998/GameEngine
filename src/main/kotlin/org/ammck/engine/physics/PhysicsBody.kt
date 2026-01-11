@@ -7,11 +7,13 @@ class PhysicsBody(
     val isStatic: Boolean = false,
     val turnSpeed: Float = 2.5f,
     val accelerationFactor: Float = 100f,
-    val linearDrag: Float = 0.99f,
-    val angularDrag: Float = 0.98f
+    val linearDrag: Float = 0.995f,
+    val angularDrag: Float = 0.98f,
+    val lateralGrip: Float = 0.93f,
 ){
 
     var velocity: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)
+    var previousVelocity: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)
     val forces: Vector3f = Vector3f(0.0f,0.0f,0.0f)
     val torques: Vector3f = Vector3f(0.0f, 0.0f, 0.0f)
 

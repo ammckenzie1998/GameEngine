@@ -24,7 +24,10 @@ class GameObject(
     var parent: GameObject? = null
     var children = mutableListOf<GameObject>()
 
+    val baseMatrix = Matrix4f()
     val globalMatrix = Matrix4f()
+    val visualOrientation = Quaternionf()
+    var attachVisualsToParent: Boolean = true
 
     fun addChild(child: GameObject){
         child.parent = this
@@ -38,31 +41,37 @@ class GameObject(
     }
 
     fun update(){
+
+        var parentMatrix = Matrix4f()
+
         if (parent != null) {
-            val parentPos = parent!!.globalMatrix.getTranslation(Vector3f())
-            val parentRot = parent!!.globalMatrix.getNormalizedRotation(Quaternionf())
-            val parentScale = parent!!.globalMatrix.getScale(Vector3f())
-
-            val scaledLocalPos = Vector3f(transform.position).mul(parentScale)
-
-            val worldPos = scaledLocalPos.rotate(parentRot).add(parentPos)
-            val worldRot = Quaternionf(parentRot).mul(transform.orientation)
-            val worldScale = Vector3f(transform.scale).mul(parentScale)
-
-            globalMatrix.identity()
-                .translate(worldPos)
-                .rotate(worldRot)
-                .scale(worldScale)
-        } else {
-            globalMatrix.identity()
-                .translate(transform.position)
-                .rotate(transform.orientation)
-                .scale(transform.scale)
+            parentMatrix =
+                if (attachVisualsToParent) parent!!.globalMatrix
+                else parent!!.baseMatrix
         }
+
+
+        val parentPos = parentMatrix.getTranslation(Vector3f())
+        val parentRot = parentMatrix.getNormalizedRotation(Quaternionf())
+        val parentScale = parentMatrix.getScale(Vector3f())
+
+        val scaledLocalPos = Vector3f(transform.position).mul(parentScale)
+        val worldPos = scaledLocalPos.rotate(parentRot).add(parentPos)
+        val worldRot = Quaternionf(parentRot).mul(transform.orientation)
+        val worldScale = Vector3f(transform.scale).mul(parentScale)
+
+        baseMatrix.identity()
+            .translate(worldPos)
+            .rotate(worldRot)
+            .scale(worldScale)
+
+        globalMatrix.set(baseMatrix)
+        globalMatrix.rotate(visualOrientation)
 
         for(child in children){
             child.update()
         }
+
     }
 
     fun updateMesh(reloadedPaths: List<String>){
