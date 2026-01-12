@@ -40,6 +40,8 @@ class Vehicle (val gameObject: GameObject) {
 
     private var wasAirborne = false
 
+    private val maxSpeed = 60.0f
+
     fun update(
         deltaTime: Float,
         vehicleCommands: VehicleCommands,
@@ -158,8 +160,10 @@ class Vehicle (val gameObject: GameObject) {
             transform.orientation.slerp(alignRotation.mul(transform.orientation, Quaternionf()), GROUND_ALIGNMENT_SPEED * deltaTime)
         }
 
-
-        if(commands.throttle != 0.0f){
+        val velocity = body.velocity
+        val horizontalVelocity = (velocity.x * velocity.x) + (velocity.z * velocity.z)
+        println(horizontalVelocity)
+        if(commands.throttle != 0.0f && horizontalVelocity < (maxSpeed * maxSpeed)){
             val forward = Vector3f(0f, 0f, -1f).rotate(transform.orientation)
             val styleMultiplier = 1.0f + (currentStylePoints / MAX_STYLEPOINTS)
             val accel = body.accelerationFactor * styleMultiplier
