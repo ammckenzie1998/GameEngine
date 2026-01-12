@@ -4,5 +4,6 @@ data class VehicleCommands(
     val throttle: Float = 0.0f,
     val steerDirection: Float = 0.0f,
     val pitchMode: Boolean = false,
-    val weaponTrigger: Boolean = false
+    val weaponTrigger: Boolean = false,
+    val handbrake: Boolean = false
 )

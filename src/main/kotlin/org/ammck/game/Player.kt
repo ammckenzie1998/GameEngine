@@ -22,8 +22,9 @@ class Player (val vehicle: Vehicle) {
         }
         val pitchMode = playerInput.isPitchPressed
         val fireWeapon = playerInput.isFirePressed
+        val handbrake = playerInput.isPitchPressed
 
-        val commands = VehicleCommands(throttle, steerDirection, pitchMode, fireWeapon)
+        val commands = VehicleCommands(throttle, steerDirection, pitchMode, fireWeapon, handbrake)
         vehicle.update(deltaTime, commands, onSpawn)
     }
 

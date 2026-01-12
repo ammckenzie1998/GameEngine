@@ -196,7 +196,7 @@ object Game{
         val aiTransforms = listOf(aiPos1, aiPos2, aiPos3)
         val aiVehicles = mutableListOf<Vehicle>()
 //        for (i in 0 until aiTransforms.size) {
-//            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], chassisModel, wheelMesh)
+//            val aiVehicle = VehicleFactory.createVehicle("AI-${i}", aiTransforms[i], newChassisModel, wheelMesh)
 //            val aiObject = aiVehicle.gameObject
 //            aiVehicles.add(aiVehicle)
 //            gameObjects.add(aiObject)

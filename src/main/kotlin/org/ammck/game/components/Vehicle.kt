@@ -166,7 +166,7 @@ class Vehicle (val gameObject: GameObject) {
 
         val velocity = body.velocity
         val horizontalVelocity = (velocity.x * velocity.x) + (velocity.z * velocity.z)
-        println(horizontalVelocity)
+
         if(commands.throttle != 0.0f && horizontalVelocity < (maxSpeed * maxSpeed)){
             val forward = Vector3f(0f, 0f, -1f).rotate(transform.orientation)
             val styleMultiplier = 1.0f + (currentStylePoints / MAX_STYLEPOINTS)
@@ -175,6 +175,14 @@ class Vehicle (val gameObject: GameObject) {
         }
 
         val finalSpeed = org.joml.Math.sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
+
+        if(commands.handbrake){
+            body.lateralGrip = 0.99f
+            body.linearDrag = 0.99f
+        } else{
+            body.lateralGrip = 0.90f
+            body.linearDrag = 0.995f
+        }
         animateWheels(deltaTime, finalSpeed)
     }
 
