@@ -8,12 +8,14 @@ import org.joml.Quaternionf
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.sign
 
 class Vehicle (val gameObject: GameObject) {
 
     private val WHEEL_RADIUS = 1.0f
     private val MIN_SPEED_TO_TURN = 5f
     private val MAX_STEER_ANGLE = 0.5f
+    private val STEERING_RESPONSE_SPEED = 10.0f
     private val WHEEL_RETURN_TO_ORIGIN_SPEED = 8.0f
     private val AERIAL_ROTATION_SPEED = 10.0f
     private val GROUND_ALIGNMENT_SPEED = 8.0f
@@ -39,6 +41,7 @@ class Vehicle (val gameObject: GameObject) {
     private var lastFrameOrientation = Quaternionf()
 
     private var wasAirborne = false
+    private var currentSteeringAmount = 0.0f
 
     private val maxSpeed = 60.0f
 
@@ -63,6 +66,7 @@ class Vehicle (val gameObject: GameObject) {
         }
 
         if(currentHealth > 0) {
+            processSteeringInput(deltaTime, vehicleCommands)
             when (body.isGrounded) {
                 true -> {
                     groundControl(deltaTime, vehicleCommands)
@@ -151,7 +155,7 @@ class Vehicle (val gameObject: GameObject) {
 
         val currentSpeed = org.joml.Math.sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z)
         if (currentSpeed > MIN_SPEED_TO_TURN) {
-            transform.orientation.rotateAxis(-commands.steerDirection * body.turnSpeed * deltaTime, 0f, 1f, 0f)
+            transform.orientation.rotateAxis(currentSteeringAmount * body.turnSpeed * deltaTime, 0f, 1f, 0f)
         }
 
         if (body.groundNormal.lengthSquared() > 0.1f) {
@@ -190,6 +194,18 @@ class Vehicle (val gameObject: GameObject) {
             transform.orientation.rotateZ(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
         } else{
             transform.orientation.rotateY(-commands.steerDirection * AERIAL_ROTATION_SPEED * deltaTime)
+        }
+    }
+
+    private fun processSteeringInput(deltaTime: Float, commands: VehicleCommands){
+        val targetInput = -commands.steerDirection
+        val diff = targetInput - currentSteeringAmount
+        val step = STEERING_RESPONSE_SPEED * deltaTime
+
+        if(abs(diff) < step){
+            currentSteeringAmount = targetInput
+        } else{
+            currentSteeringAmount += sign(diff) * step
         }
     }
 
