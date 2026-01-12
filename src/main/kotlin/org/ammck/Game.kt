@@ -226,7 +226,7 @@ object Game{
 
         physicsEngine.addObjects(*gameObjects.toTypedArray())
 
-        playerCamera = Camera(playerGameObject.transform, distance = 9.0f, smoothFactor = 9.0f)
+        playerCamera = Camera(playerGameObject.transform, distance = 7.0f, smoothFactor = 12.0f)
 
 //        val playerWeapon = WeaponFactory.createDefaultGun(cubeModel, cubeModel)
 //        VehicleFactory.attachWeapon(playerVehicle, playerWeapon, AttachmentType.ROOF_MOUNT)
