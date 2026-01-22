@@ -4,6 +4,7 @@ import org.ammck.engine.objects.GameObject
 import org.ammck.engine.render.Mesh
 import org.joml.Matrix4f
 import org.joml.Vector3f
+import org.joml.Vector4f
 import kotlin.math.abs
 
 object Raycaster {
@@ -69,5 +70,28 @@ object Raycaster {
             }
         }
         return intersectionResult
+    }
+
+    fun screenPointToRay(mouseX: Float, mouseY: Float, screenWidth: Int, screenHeight: Int, viewMatrix: Matrix4f, projecionMatrix: Matrix4f): Ray{
+        val x = (2.0f * mouseX) / screenWidth - 1.0f
+        val y = 1.0f - (2.0f * mouseY) / screenHeight
+        val z = -1.0f
+
+        val o = Vector4f(x, y, z, 1.0f)
+
+        val inverseProjection = Matrix4f(projecionMatrix).invert()
+        val rayPerspective = inverseProjection.transform(o)
+
+        rayPerspective.z = -1.0f
+        rayPerspective.w = 0.0f
+
+        val inverseView = Matrix4f(viewMatrix).invert()
+        val rayWorld = inverseView.transform(rayPerspective)
+        val rayDirection = Vector3f(rayWorld.x, rayWorld.y, rayWorld.z).normalize()
+
+        val rayOrigin = Vector3f()
+        inverseView.getTranslation(rayOrigin)
+
+        return Ray(rayOrigin, rayDirection)
     }
 }

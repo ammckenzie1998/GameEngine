@@ -11,12 +11,14 @@ import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
 import org.ammck.engine.objects.AttachmentType
 import org.ammck.engine.objects.Model
+import org.ammck.engine.physics.Raycaster
 import org.ammck.game.Player
 import org.ammck.engine.render.Mesh
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.AIController
 import org.ammck.game.GameState
+import org.ammck.game.LevelEditor
 import org.ammck.game.PlayerInput
 import org.ammck.game.race.RaceManager
 import org.ammck.game.components.Vehicle
@@ -40,6 +42,7 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_F2
 import org.lwjgl.glfw.GLFW.GLFW_KEY_Q
 import org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE
 import org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT
+import org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
 import org.lwjgl.glfw.GLFW.GLFW_RESIZABLE
 import org.lwjgl.glfw.GLFW.GLFW_TRUE
@@ -90,6 +93,8 @@ object Game{
     private var gameStates = mutableMapOf<GameState, Boolean>()
     private var framesTilNextModeSwitch = 0
     private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
+    private var framesTilNextObjectSelection = 0
+    private const val MAX_FRAMES_TIL_NEXT_OBJ_SELECTION = 60
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
@@ -113,6 +118,7 @@ object Game{
     private lateinit var playerCamera: Camera
     private lateinit var editCamera: FreeFlyCamera
     private lateinit var physicsEngine: PhysicsEngine
+    private lateinit var levelEditor: LevelEditor
 
     private lateinit var player: Player
     private val gameObjects = mutableListOf<GameObject>()
@@ -172,6 +178,7 @@ object Game{
         lastFrameTime = glfwGetTime()
         gameStates[GameState.PLAY] = true
         editCamera = FreeFlyCamera(Vector3f(0f, 10f, 0f))
+        levelEditor = LevelEditor(debugShaderProgram, cubeMesh)
     }
 
     private fun loadLevel(levelPath: String){
@@ -254,17 +261,34 @@ object Game{
             val editorInput = getEditorInput()
 
             if(gameStates[GameState.EDITOR] == true){
-                val (reloadMeshes, reloadLevels) = AssetManager.update()
-                if(reloadLevels.contains(currentLevelPath)){
-                    clearWorld()
-                    loadLevel(currentLevelPath)
-                }
+                val ray = Raycaster.screenPointToRay(
+                    lastMouseX.toFloat(),
+                    lastMouseY.toFloat(),
+                    INITIAL_WINDOW_WIDTH,
+                    INITIAL_WINDOW_HEIGHT,
+                    editCamera.getViewMatrix(),
+                    projectionMatrix
+                )
 
-                if(reloadMeshes.isNotEmpty()){
-                    for(gameObject in gameObjects){
-                        gameObject.updateMesh(reloadMeshes)
-                    }
+                levelEditor.hoverObjects(ray, gameObjects.filter { it.id != "Ground"})
+
+
+                if (framesTilNextObjectSelection == 0 && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS){
+                    levelEditor.selectObject(ray, gameObjects.filter { it.id != "Ground"})
+                    framesTilNextObjectSelection = MAX_FRAMES_TIL_NEXT_OBJ_SELECTION
                 }
+                if (framesTilNextObjectSelection > 0) framesTilNextObjectSelection--
+//                val (reloadMeshes, reloadLevels) = AssetManager.update()
+//                if(reloadLevels.contains(currentLevelPath)){
+//                    clearWorld()
+//                    loadLevel(currentLevelPath)
+//                }
+//
+//                if(reloadMeshes.isNotEmpty()){
+//                    for(gameObject in gameObjects){
+//                        gameObject.updateMesh(reloadMeshes)
+//                    }
+//                }
             }
 
             while(accumulator >= FIXED_DELTA_TIME) {
@@ -302,6 +326,7 @@ object Game{
             renderScene()
             if(gameStates[GameState.PLAY] == true) renderHUD()
             if(gameStates[GameState.DEBUG] == true) renderDebugVisuals()
+            if(gameStates[GameState.EDITOR] == true) levelEditor.render(editCamera.getViewMatrix(), projectionMatrix)
 
             mouseDeltaX = 0.0f
             mouseDeltaY = 0.0f
