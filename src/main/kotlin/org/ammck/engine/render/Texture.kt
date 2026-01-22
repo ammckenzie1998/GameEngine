@@ -16,6 +16,7 @@ import org.lwjgl.opengl.GL11.glDeleteTextures
 import org.lwjgl.opengl.GL11.glGenTextures
 import org.lwjgl.opengl.GL11.glTexImage2D
 import org.lwjgl.opengl.GL11.glTexParameteri
+import org.lwjgl.opengl.GL14.GL_MIRRORED_REPEAT
 import org.lwjgl.opengl.GL30.glGenerateMipmap
 import org.lwjgl.stb.STBImage.stbi_image_free
 import org.lwjgl.stb.STBImage.stbi_load_from_memory
@@ -29,8 +30,8 @@ class Texture{
     constructor(resourcePath: String){
         glBindTexture(GL_TEXTURE_2D, id)
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT)
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
