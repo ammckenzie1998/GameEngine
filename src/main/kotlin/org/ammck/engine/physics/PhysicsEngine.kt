@@ -3,6 +3,7 @@ package org.ammck.engine.physics
 import org.ammck.engine.objects.GameObject
 import org.ammck.engine.render.Mesh
 import org.joml.Matrix3f
+import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector3f
 import java.util.Vector
@@ -192,8 +193,11 @@ class PhysicsEngine {
         if (velocityAlongNormal > 0) return
 
 
-        val e = 2f // Bounciness
+        val e = 0.5f // Bounciness
         var j = -(1 + e) * velocityAlongNormal
+        val impactRadius = (j * 0.05f).coerceIn(0.5f, 2.5f)
+        val impactForce = j * 0.1f
+
         val termA = if (bodyA.inverseInertia > 0) Vector3f(ra).cross(normal).lengthSquared() * bodyA.inverseInertia else 0.0f
         val termB = if (bodyB.inverseInertia > 0) Vector3f(rb).cross(normal).lengthSquared() * bodyB.inverseInertia else 0.0f
         if(totalInverseMass + termA + termB > 0) j /= (totalInverseMass + termA + termB) else j = 0.0f
@@ -202,11 +206,19 @@ class PhysicsEngine {
             bodyA.velocity.sub(Vector3f(impulse).mul(bodyA.inverseMass))
             bodyA.angularVelocity.sub(Vector3f(ra).cross(impulse).mul(bodyA.inverseInertia))
             bodyA.lastImpactImpulse += j
+
+            val worldToLocal = Matrix4f(collision.firstObject.globalMatrix).invert()
+            val localHit = Vector3f(collisionPoint).mulPosition(worldToLocal)
+            collision.firstObject.model.mesh.applyDeformation(localHit, impactForce, impactRadius)
         }
         if (!bodyB.isStatic) {
             bodyB.velocity.add(Vector3f(impulse).mul(bodyB.inverseMass))
             bodyB.angularVelocity.add(Vector3f(rb).cross(impulse).mul(bodyB.inverseInertia))
             bodyB.lastImpactImpulse += j
+
+            val worldToLocal = Matrix4f(collision.secondObject.globalMatrix).invert()
+            val localHit = Vector3f(collisionPoint).mulPosition(worldToLocal)
+            collision.secondObject.model.mesh.applyDeformation(localHit, impactForce, impactRadius)
         }
 
         if(normal.y < 0.5f && !bodyA.isStatic){

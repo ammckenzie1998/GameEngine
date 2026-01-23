@@ -5,6 +5,7 @@ import org.lwjgl.opengl.GL11.GL_FLOAT
 import org.lwjgl.opengl.GL11.GL_TRIANGLES
 import org.lwjgl.opengl.GL11.glDrawArrays
 import org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER
+import org.lwjgl.opengl.GL15.GL_DYNAMIC_DRAW
 import org.lwjgl.opengl.GL15.GL_STATIC_DRAW
 import org.lwjgl.opengl.GL15.glBindBuffer
 import org.lwjgl.opengl.GL15.glBufferData
@@ -16,8 +17,9 @@ import org.lwjgl.opengl.GL30.glBindVertexArray
 import org.lwjgl.opengl.GL30.glDeleteVertexArrays
 import org.lwjgl.opengl.GL30.glGenVertexArrays
 import javax.swing.text.Position
+import kotlin.math.sqrt
 
-class Mesh (val resourcePath: String?, val vertices: FloatArray) {
+class Mesh (val resourcePath: String?, var vertices: FloatArray) {
 
     private val vaoId: Int
     private val vboId: Int
@@ -51,7 +53,7 @@ class Mesh (val resourcePath: String?, val vertices: FloatArray) {
 
         vboId = glGenBuffers()
         glBindBuffer(GL_ARRAY_BUFFER, vboId)
-        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_DYNAMIC_DRAW)
 
         glVertexAttribPointer(
             POSITION_ATTRIBUTE_LOCATION,
@@ -115,6 +117,53 @@ class Mesh (val resourcePath: String?, val vertices: FloatArray) {
             vertices[iy],
             vertices[iz]
         )
+    }
+
+    fun updateVertexBuffer() {
+        glBindBuffer(GL_ARRAY_BUFFER, vboId)
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_DYNAMIC_DRAW)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+    }
+
+    fun clone(): Mesh{
+        return Mesh(resourcePath, vertices.clone())
+    }
+
+    fun applyDeformation (impactPoint: Vector3f, force: Float, radius: Float){
+        var modified = false
+        val rSquared = radius * radius
+
+        for (i in vertices.indices step VERTEX_FLOAT_COUNT){
+            val vx = vertices[i]
+            val vy = vertices[i+1]
+            val vz = vertices[i+2]
+
+            val dx = vx - impactPoint.x
+            val dy = vy - impactPoint.y
+            val dz = vz - impactPoint.z
+            val dSquared = (dx * dx) + (dy * dy) + (dz * dz)
+
+            if (dSquared < rSquared){
+                val distance = sqrt(dSquared.toDouble()).toFloat()
+                val intensity = (radius - distance) / radius
+                val amount = force * intensity * 0.05f
+
+                val currentPos = Vector3f(vx, vy, vz)
+                val toCenter = Vector3f(0f, 0f, 0f).sub(currentPos).normalize()
+
+                val noise = (Math.random().toFloat() - 0.5f) * 0.05f
+
+                vertices[i] += (toCenter.x * amount) + noise
+                vertices[i+1] += (toCenter.y * amount) + noise
+                vertices[i+2] += (toCenter.z * amount) + noise
+
+                modified = true
+            }
+        }
+
+        if (modified){
+            updateVertexBuffer()
+        }
     }
 
 }

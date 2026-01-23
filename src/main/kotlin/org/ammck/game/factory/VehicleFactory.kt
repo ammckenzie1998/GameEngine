@@ -18,15 +18,19 @@ import kotlin.math.abs
 object VehicleFactory {
 
     fun createVehicle(id: String, initialTransform: Transform, chassisModel: Model, wheelMesh: Mesh): Vehicle {
-        val width = chassisModel.upperBounds.x + abs(chassisModel.lowerBounds.x)
-        val height = chassisModel.upperBounds.y + abs(chassisModel.lowerBounds.y)
-        val length = chassisModel.upperBounds.z + abs(chassisModel.lowerBounds.z)
+
+        val uniqueMesh = chassisModel.mesh.clone()
+        val uniqueModel = chassisModel.copy(mesh = uniqueMesh)
+
+        val width = uniqueModel.upperBounds.x + abs(uniqueModel.lowerBounds.x)
+        val height = uniqueModel.upperBounds.y + abs(uniqueModel.lowerBounds.y)
+        val length = uniqueModel.upperBounds.z + abs(uniqueModel.lowerBounds.z)
         val boundingBox = OrientedBoundingBox(initialTransform, Vector3f(width, height, length))
         val body = PhysicsBody(boundingBox)
 
-        val gameObject = GameObject(id, initialTransform, chassisModel, body)
+        val gameObject = GameObject(id, initialTransform, uniqueModel, body)
 
-        val wheelAttachmentPoints = chassisModel.attachmentPoints!!.filterKeys { it.name.startsWith("WHEEL") }
+        val wheelAttachmentPoints = uniqueModel.attachmentPoints!!.filterKeys { it.name.startsWith("WHEEL") }
         val suspensionPositions = mutableListOf<Vector3f>()
         for(ap in wheelAttachmentPoints){
             val wheelTransform = Transform(
