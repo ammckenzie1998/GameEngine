@@ -43,7 +43,7 @@ class Vehicle (val gameObject: GameObject) {
     private var wasAirborne = false
     private var currentSteeringAmount = 0.0f
 
-    private val maxSpeed = 60.0f
+    private val maxSpeed = 55.0f
 
     fun update(
         deltaTime: Float,
