@@ -24,7 +24,7 @@ class Vehicle (val gameObject: GameObject) {
     private val POINTS_PER_RADIAN_ROTATION = 1.0f
     private val FULL_FLIP_BONUS = 1.0f
 
-    val MAX_HEALTH = 100.0f
+    val MAX_HEALTH = 1000.0f
     var currentHealth = MAX_HEALTH
         private set
     var isDestroyed: Boolean = false
