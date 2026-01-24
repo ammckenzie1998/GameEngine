@@ -9,7 +9,6 @@ import org.ammck.engine.Transform
 import org.ammck.engine.assets.AssetManager
 import org.ammck.engine.camera.CameraInput
 import org.ammck.engine.camera.FreeFlyCamera
-import org.ammck.engine.objects.AttachmentType
 import org.ammck.engine.objects.Model
 import org.ammck.engine.physics.Raycaster
 import org.ammck.game.Player
@@ -18,13 +17,12 @@ import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.AIController
 import org.ammck.game.GameState
-import org.ammck.game.LevelEditor
+import org.ammck.game.editor.LevelEditor
 import org.ammck.game.PlayerInput
 import org.ammck.game.race.RaceManager
 import org.ammck.game.components.Vehicle
 import org.ammck.game.WaypointType
 import org.ammck.game.factory.VehicleFactory
-import org.ammck.game.factory.WeaponFactory
 import org.ammck.game.ui.HUDState
 import org.ammck.game.ui.HudManager
 import org.ammck.games.Waypoint
@@ -93,8 +91,6 @@ object Game{
     private var gameStates = mutableMapOf<GameState, Boolean>()
     private var framesTilNextModeSwitch = 0
     private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
-    private var framesTilNextObjectSelection = 0
-    private const val MAX_FRAMES_TIL_NEXT_OBJ_SELECTION = 60
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
@@ -143,6 +139,7 @@ object Game{
     private var lastMouseX = 0.0
     private var lastMouseY = 0.0
     private var firstMouse = true
+    private var mouseWasPressed = false
 
     @JvmStatic
     fun main(vararg args: String){
@@ -270,14 +267,19 @@ object Game{
                     projectionMatrix
                 )
 
-                levelEditor.hoverObjects(ray, gameObjects.filter { it.id != "Ground"})
+                levelEditor.update(ray, gameObjects.filter { it.id != "Ground"})
 
-
-                if (framesTilNextObjectSelection == 0 && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS){
-                    levelEditor.selectObject(ray, gameObjects.filter { it.id != "Ground"})
-                    framesTilNextObjectSelection = MAX_FRAMES_TIL_NEXT_OBJ_SELECTION
+                if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS){
+                    if(!mouseWasPressed) {
+                        levelEditor.selectObject(ray, gameObjects.filter { it.id != "Ground" })
+                        mouseWasPressed = true
+                    }
+                } else{
+                    if(mouseWasPressed){
+                        levelEditor.endDrag()
+                        mouseWasPressed = false
+                    }
                 }
-                if (framesTilNextObjectSelection > 0) framesTilNextObjectSelection--
 //                val (reloadMeshes, reloadLevels) = AssetManager.update()
 //                if(reloadLevels.contains(currentLevelPath)){
 //                    clearWorld()
@@ -414,6 +416,7 @@ object Game{
 
         debugShaderProgram.setUniform("projection", projectionMatrix)
         debugShaderProgram.setUniform("view", viewMatrix)
+        debugShaderProgram.setUniform("alpha", 0.3f)
         for(debugObject in gameObjects){
             debugObject.physicsBody?.let{ body ->
                 val hitbox = body.boundingBox
