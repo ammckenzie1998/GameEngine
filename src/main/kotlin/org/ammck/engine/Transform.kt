@@ -11,4 +11,12 @@ data class Transform (
     fun forwardDirection(): Vector3f{
         return Vector3f(0f, 0f, -1f).rotate(this.orientation)
     }
+
+    fun copy(): Transform{
+        return Transform(
+            Vector3f(position),
+            Quaternionf(orientation),
+            Vector3f(scale)
+        )
+    }
 }

@@ -1,6 +1,10 @@
 package org.ammck.game.editor
 
+import org.ammck.engine.Transform
 import org.ammck.engine.objects.GameObject
+import org.ammck.engine.physics.OrientedBoundingBox
+import org.ammck.engine.physics.PhysicsBody
+import org.ammck.engine.physics.PhysicsEngine
 import org.ammck.engine.physics.Ray
 import org.ammck.engine.physics.Raycaster
 import org.ammck.engine.render.Mesh
@@ -10,7 +14,6 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
-import org.lwjgl.opengl.GL11.glBlendFunc
 import kotlin.math.roundToInt
 
 class LevelEditor(val gizmoShader: ShaderProgram, val axisMesh: Mesh) {
@@ -60,6 +63,30 @@ class LevelEditor(val gizmoShader: ShaderProgram, val axisMesh: Mesh) {
         } else{
             selectedObject = getObjectUnderMouse(ray, gameObjects)
         }
+
+    }
+
+    fun duplicateSelected(gameObjects: MutableList<GameObject>, physicsEngine: PhysicsEngine){
+        val original = selectedObject ?: return
+        if (original.id.startsWith("Player") || original.id.startsWith("AI")) return
+
+        val newId = "${original.id}_copy_${System.currentTimeMillis()}"
+        val yOffset = original.physicsBody?.boundingBox?.size?.y ?: 2.0f
+
+        val newObject = original.copy(newId)
+        newObject.transform.position.add(0f,yOffset,0f)
+
+        gameObjects.add(newObject)
+        if (newObject.physicsBody != null){
+            if (newObject.isSolid){
+                physicsEngine.addObjects(newObject)
+            }
+
+            if (newObject.physicsBody!!.isStatic){
+                physicsEngine.addWorldObjects(newObject)
+            }
+        }
+        selectedObject = newObject
 
     }
 

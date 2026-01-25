@@ -2,6 +2,7 @@ package org.ammck.engine.objects
 
 import org.ammck.engine.Transform
 import org.ammck.engine.assets.AssetManager
+import org.ammck.engine.physics.OrientedBoundingBox
 import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.physics.Suspension
 import org.ammck.engine.render.Mesh
@@ -20,6 +21,7 @@ class GameObject(
     val waypoint: Waypoint? = null,
     var weapon: Weapon? = null,
     val respawnable: Boolean = true,
+    val isSolid: Boolean = true
 ){
     var parent: GameObject? = null
     var children = mutableListOf<GameObject>()
@@ -95,5 +97,24 @@ class GameObject(
             globalMatrix.getUnnormalizedRotation(Quaternionf()),
             globalMatrix.getScale(Vector3f())
         )
+    }
+
+    fun copy(id: String): GameObject{
+        val newTransform = transform.copy()
+
+        val newBody = physicsBody?.let { oldBody ->
+            val newBounds = OrientedBoundingBox(newTransform, Vector3f(oldBody.boundingBox.size).div(transform.scale))
+            PhysicsBody(newBounds, oldBody.isStatic)
+        }
+
+        val newObject = GameObject(
+            id,
+            newTransform,
+            model,
+            newBody,
+            isSolid = isSolid
+        )
+
+        return newObject
     }
 }

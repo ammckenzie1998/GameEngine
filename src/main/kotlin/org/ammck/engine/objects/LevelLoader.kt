@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.ammck.engine.Transform
 import org.ammck.engine.assets.AssetManager
+import org.ammck.engine.physics.OrientedBoundingBox
+import org.ammck.engine.physics.PhysicsBody
 import org.ammck.engine.render.Mesh
 import org.ammck.game.WaypointType
 import org.ammck.games.Waypoint
@@ -21,7 +23,8 @@ private data class LevelData(
 private data class ObjectData(
     val name: String,
     val mesh: String,
-    val positions: List<List<Double>>
+    val positions: List<List<Double>>,
+    val isSolid: Boolean = true
 )
 
 
@@ -50,11 +53,16 @@ object LevelLoader {
                     Waypoint(WaypointType.RACE_CHECKPOINT, index)
                 else null
 
+                val boundingBox = OrientedBoundingBox(objectTransform, mesh.upperBounds)
+                val physicsBody = PhysicsBody(boundingBox, isStatic = true)
+
                 val gameObject = GameObject(
                     id = goData.name,
                     transform = objectTransform,
                     model = mesh,
-                    waypoint = waypoint
+                    physicsBody = physicsBody,
+                    waypoint = waypoint,
+                    isSolid = goData.isSolid
                 )
                 objectList.add(gameObject)
                 index++

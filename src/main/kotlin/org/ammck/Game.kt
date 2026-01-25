@@ -33,6 +33,7 @@ import org.lwjgl.glfw.GLFW.GLFW_FALSE
 import org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE
 import org.lwjgl.glfw.GLFW.GLFW_KEY_W
 import org.lwjgl.glfw.GLFW.GLFW_KEY_A
+import org.lwjgl.glfw.GLFW.GLFW_KEY_C
 import org.lwjgl.glfw.GLFW.GLFW_KEY_S
 import org.lwjgl.glfw.GLFW.GLFW_KEY_D
 import org.lwjgl.glfw.GLFW.GLFW_KEY_E
@@ -130,6 +131,7 @@ object Game{
     private var mouseWasPressed = false
     private var debugKeyWasPressed = false
     private var editModeKeyWasPressed = false
+    private var copyKeyWasPressed = false
 
     @JvmStatic
     fun main(vararg args: String){
@@ -220,7 +222,7 @@ object Game{
             aiControllers.add(aiController)
         }
 
-        physicsEngine.addObjects(*gameObjects.toTypedArray())
+        physicsEngine.addObjects(*gameObjects.filter { it.isSolid }.toTypedArray())
 
         playerCamera = Camera(playerGameObject.transform, distance = 7.0f, smoothFactor = 12.0f)
 
@@ -271,6 +273,15 @@ object Game{
                         levelEditor.endDrag()
                         mouseWasPressed = false
                     }
+                }
+
+                if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS){
+                    if (!copyKeyWasPressed){
+                        levelEditor.duplicateSelected(gameObjects, physicsEngine)
+                        copyKeyWasPressed = true
+                    }
+                } else{
+                    copyKeyWasPressed = false
                 }
 //                val (reloadMeshes, reloadLevels) = AssetManager.update()
 //                if(reloadLevels.contains(currentLevelPath)){

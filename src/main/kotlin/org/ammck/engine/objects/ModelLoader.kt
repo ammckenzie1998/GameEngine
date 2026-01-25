@@ -269,6 +269,9 @@ object ModelLoader {
         val modelData = jsonParser.decodeFromString<ModelData>(fileContent)
         val vertexList = mutableListOf<Float>()
 
+        val lowerBounds = Vector3f(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE)
+        val upperBounds = Vector3f(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
+
         val defaultNormal = listOf(0f, 1f, 0f)
 
         for(polygon in modelData.polygons){
@@ -298,6 +301,34 @@ object ModelLoader {
                 vertexList.addAll(colorData)
                 vertexList.addAll(t3)
                 vertexList.addAll(defaultNormal)
+
+                updateUpperAndLowerBounds(
+                    upperBounds,
+                    lowerBounds,
+                    Vector3f(
+                        MathUtil.scaleFloats(modelData.scale,v1)[0],
+                        MathUtil.scaleFloats(modelData.scale,v1)[1],
+                        MathUtil.scaleFloats(modelData.scale,v1)[2]
+                    )
+                )
+                updateUpperAndLowerBounds(
+                    upperBounds,
+                    lowerBounds,
+                    Vector3f(
+                        MathUtil.scaleFloats(modelData.scale,v2)[0],
+                        MathUtil.scaleFloats(modelData.scale,v2)[1],
+                        MathUtil.scaleFloats(modelData.scale,v2)[2]
+                    )
+                )
+                updateUpperAndLowerBounds(
+                    upperBounds,
+                    lowerBounds,
+                    Vector3f(
+                        MathUtil.scaleFloats(modelData.scale,v3)[0],
+                        MathUtil.scaleFloats(modelData.scale,v3)[1],
+                        MathUtil.scaleFloats(modelData.scale,v3)[2]
+                    )
+                )
             }
         }
 
@@ -323,6 +354,6 @@ object ModelLoader {
             }
         }
 
-        return Model(mesh, attachmentPoints)
+        return Model(mesh, attachmentPoints, upperBounds = upperBounds, lowerBounds = lowerBounds)
     }
 }
