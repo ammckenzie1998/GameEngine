@@ -496,9 +496,19 @@ object Game{
         } else{
             defaultTexture.bind()
         }
-
+        val usePriorityOffset = gameObject.renderPriority != 0
         shaderProgram.setUniform("model", gameObject.globalMatrix)
-        gameObject.model.mesh.draw()
+
+        RenderContext.withState(
+            polygonOffset = if(usePriorityOffset) true else null
+        ){
+            if (usePriorityOffset){
+                val offset = -1.0f * gameObject.renderPriority
+                RenderContext.setPolygonOffset(offset, offset)
+            }
+            gameObject.model.mesh.draw()
+        }
+
 
         if(gameObject.id == "Player") {
             RenderContext.withState(

@@ -24,7 +24,8 @@ private data class ObjectData(
     val name: String,
     val mesh: String,
     val positions: List<List<Double>>,
-    val isSolid: Boolean = true
+    val isSolid: Boolean = true,
+    val renderPriority: Int = 0
 )
 
 
@@ -62,7 +63,8 @@ object LevelLoader {
                     model = mesh,
                     physicsBody = physicsBody,
                     waypoint = waypoint,
-                    isSolid = goData.isSolid
+                    isSolid = goData.isSolid,
+                    renderPriority = goData.renderPriority
                 )
                 objectList.add(gameObject)
                 index++

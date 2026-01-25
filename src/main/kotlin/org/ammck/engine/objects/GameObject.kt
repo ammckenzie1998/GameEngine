@@ -21,7 +21,8 @@ class GameObject(
     val waypoint: Waypoint? = null,
     var weapon: Weapon? = null,
     val respawnable: Boolean = true,
-    val isSolid: Boolean = true
+    val isSolid: Boolean = true,
+    val renderPriority: Int = 0
 ){
     var parent: GameObject? = null
     var children = mutableListOf<GameObject>()
@@ -112,7 +113,8 @@ class GameObject(
             newTransform,
             model,
             newBody,
-            isSolid = isSolid
+            isSolid = isSolid,
+            renderPriority = renderPriority
         )
 
         return newObject
