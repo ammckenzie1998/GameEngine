@@ -4,22 +4,13 @@ import org.ammck.engine.objects.GameObject
 import org.ammck.engine.physics.Ray
 import org.ammck.engine.physics.Raycaster
 import org.ammck.engine.render.Mesh
+import org.ammck.engine.render.RenderContext
 import org.ammck.engine.render.ShaderProgram
 import org.joml.Matrix4f
 import org.joml.Vector3f
-import org.lwjgl.opengl.GL11.GL_BACK
-import org.lwjgl.opengl.GL11.GL_BLEND
-import org.lwjgl.opengl.GL11.GL_CULL_FACE
-import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
-import org.lwjgl.opengl.GL11.GL_POLYGON_OFFSET_FILL
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 import org.lwjgl.opengl.GL11.glBlendFunc
-import org.lwjgl.opengl.GL11.glCullFace
-import org.lwjgl.opengl.GL11.glDepthMask
-import org.lwjgl.opengl.GL11.glDisable
-import org.lwjgl.opengl.GL11.glEnable
-import org.lwjgl.opengl.GL11.glPolygonOffset
 import kotlin.math.roundToInt
 
 class LevelEditor(val gizmoShader: ShaderProgram, val axisMesh: Mesh) {
@@ -32,8 +23,8 @@ class LevelEditor(val gizmoShader: ShaderProgram, val axisMesh: Mesh) {
 
     private val selectedColor = Vector3f(1f, 1f, 0f)
 
-    private val selectedAlpha = 0.2f
-    private val hoveredAlpha = 0.4f
+    private val selectedAlpha = 0.4f
+    private val hoveredAlpha = 0.2f
 
     var isDragging = false
     private var dragStartPos = Vector3f()
@@ -97,20 +88,16 @@ class LevelEditor(val gizmoShader: ShaderProgram, val axisMesh: Mesh) {
         gizmoShader.setUniform("debugColor", color)
         gizmoShader.setUniform("alpha", alpha)
 
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glDepthMask(false)
-        glEnable(GL_POLYGON_OFFSET_FILL)
-        glPolygonOffset(-1.0f, -1.0f)
-        glDisable(GL_CULL_FACE)
-
-        obj.model.mesh.draw()
-
-        glEnable(GL_CULL_FACE)
-        glCullFace(GL_BACK)
-        glDisable(GL_POLYGON_OFFSET_FILL)
-        glDepthMask(true)
-        glDisable(GL_BLEND)
+        RenderContext.withState(
+            blend = true,
+            depthMask = false,
+            cullFace = false,
+            polygonOffset = true
+        ){
+            RenderContext.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            RenderContext.setPolygonOffset(-2.5f, 2.5f)
+            obj.model.mesh.draw()
+        }
 
         gizmoShader.unbind()
     }

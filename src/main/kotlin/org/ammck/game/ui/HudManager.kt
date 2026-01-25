@@ -2,19 +2,13 @@ package org.ammck.game.ui
 
 import org.ammck.engine.assets.Font
 import org.ammck.engine.render.Mesh
+import org.ammck.engine.render.RenderContext
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
-import org.ammck.game.components.Vehicle
 import org.joml.Matrix4f
 import org.joml.Vector3f
-import org.lwjgl.opengl.GL11.GL_BLEND
-import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
-import org.lwjgl.opengl.GL11.glBlendFunc
-import org.lwjgl.opengl.GL11.glDisable
-import org.lwjgl.opengl.GL11.glEnable
-import kotlin.math.sqrt
 
 class HudManager(
     private var state: HUDState,
@@ -28,36 +22,51 @@ class HudManager(
     private val font: Font = Font("fonts/Pirulen Rg.otf", 32f)
 
     fun draw(){
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        shader.bind()
-        shader.setUniform("projection", projectionMatrix)
+        RenderContext.withState(
+            depthTest =  false,
+            blend = true
+        ) {
+            RenderContext.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        defaultTexture.bind()
-        drawBar(x = 20f, y = 20f, width = 300f, height = 20f, percentage = state.stylePercentage, color = Vector3f(0.5f, 0.5f, 1.0f))
-        drawBar(x = 20f, y = 50f, width = 300f, height = 20f, percentage = state.healthPercentage, color = Vector3f(1.0f, 0.5f, 0.5f))
+            shader.bind()
+            shader.setUniform("projection", projectionMatrix)
 
-        font.texture.bind()
-        shader.setUniform("uAlpha", 1.0f)
+            defaultTexture.bind()
+            drawBar(
+                x = 20f,
+                y = 20f,
+                width = 300f,
+                height = 20f,
+                percentage = state.stylePercentage,
+                color = Vector3f(0.5f, 0.5f, 1.0f)
+            )
+            drawBar(
+                x = 20f,
+                y = 50f,
+                width = 300f,
+                height = 20f,
+                percentage = state.healthPercentage,
+                color = Vector3f(1.0f, 0.5f, 0.5f)
+            )
 
-        val speedText = "${state.speedKPH} KPH"
-        val rgb = Vector3f(1f, 1f, 1f)
-        font.drawText(speedText, 600f, 50f, 1.0f, rgb, shader, quadMesh)
+            font.texture.bind()
+            shader.setUniform("uAlpha", 1.0f)
 
-        val lapText = "LAP: ${state.currentLap} / ${state.totalLaps}"
-        font.drawText(lapText, 20f, 580f, 0.75f, rgb, shader, quadMesh)
+            val speedText = "${state.speedKPH} KPH"
+            val rgb = Vector3f(1f, 1f, 1f)
+            font.drawText(speedText, 600f, 50f, 1.0f, rgb, shader, quadMesh)
 
-        val posText = "POS: ${state.currentPos} / ${state.totalRacers - state.eliminatedRacers}"
-        font.drawText(posText, 600f, 580f, 0.75f, rgb, shader, quadMesh)
+            val lapText = "LAP: ${state.currentLap} / ${state.totalLaps}"
+            font.drawText(lapText, 20f, 580f, 0.75f, rgb, shader, quadMesh)
 
-        val elimText = "ELIM: ${state.eliminatedRacers} / ${state.totalRacers}"
-        font.drawText(elimText, 600f, 560f, 0.75f, rgb, shader, quadMesh)
+            val posText = "POS: ${state.currentPos} / ${state.totalRacers - state.eliminatedRacers}"
+            font.drawText(posText, 600f, 580f, 0.75f, rgb, shader, quadMesh)
 
-        shader.unbind()
+            val elimText = "ELIM: ${state.eliminatedRacers} / ${state.totalRacers}"
+            font.drawText(elimText, 600f, 560f, 0.75f, rgb, shader, quadMesh)
 
-        glDisable(GL_BLEND)
-        glEnable(GL_DEPTH_TEST)
+            shader.unbind()
+        }
     }
 
     private fun drawBar(x: Float, y: Float, width: Float, height: Float, percentage: Float, color: Vector3f){

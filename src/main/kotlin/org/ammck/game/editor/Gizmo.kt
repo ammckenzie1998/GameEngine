@@ -6,20 +6,12 @@ import org.ammck.engine.objects.Model
 import org.ammck.engine.physics.Ray
 import org.ammck.engine.physics.Raycaster
 import org.ammck.engine.render.Mesh
+import org.ammck.engine.render.RenderContext
 import org.ammck.engine.render.ShaderProgram
 import org.joml.Matrix4f
 import org.joml.Vector3f
-import org.lwjgl.opengl.GL11.GL_BLEND
-import org.lwjgl.opengl.GL11.GL_CULL_FACE
 import org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT
-import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
-import org.lwjgl.opengl.GL11.GL_FILL
-import org.lwjgl.opengl.GL11.GL_FRONT_AND_BACK
 import org.lwjgl.opengl.GL11.glClear
-import org.lwjgl.opengl.GL11.glDepthMask
-import org.lwjgl.opengl.GL11.glDisable
-import org.lwjgl.opengl.GL11.glEnable
-import org.lwjgl.opengl.GL11.glPolygonMode
 
 class Gizmo(val mesh: Mesh) {
 
@@ -74,17 +66,18 @@ class Gizmo(val mesh: Mesh) {
         shader.setUniform("projection", projection)
         shader.setUniform("alpha", 1.0f)
 
-        glDepthMask(true)
-        glDisable(GL_BLEND)
-        glEnable(GL_DEPTH_TEST)
-        glClear(GL_DEPTH_BUFFER_BIT)
-        glDisable(GL_CULL_FACE)
+        RenderContext.withState(
+            depthTest = true,
+            depthMask = true,
+            cullFace = false,
+            blend = false
+        ){
+            glClear(GL_DEPTH_BUFFER_BIT)
+            renderAxis(shader, gizmoX, Axis.X)
+            renderAxis(shader, gizmoY, Axis.Y)
+            renderAxis(shader, gizmoZ, Axis.Z)
+        }
 
-        renderAxis(shader, gizmoX, Axis.X)
-        renderAxis(shader, gizmoY, Axis.Y)
-        renderAxis(shader, gizmoZ, Axis.Z)
-
-        glEnable(GL_CULL_FACE)
 
         shader.unbind()
     }

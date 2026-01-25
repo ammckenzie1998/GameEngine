@@ -13,6 +13,7 @@ import org.ammck.engine.objects.Model
 import org.ammck.engine.physics.Raycaster
 import org.ammck.game.Player
 import org.ammck.engine.render.Mesh
+import org.ammck.engine.render.RenderContext
 import org.ammck.engine.render.ShaderProgram
 import org.ammck.engine.render.Texture
 import org.ammck.game.AIController
@@ -63,23 +64,13 @@ import org.lwjgl.glfw.GLFW.glfwTerminate
 import org.lwjgl.glfw.GLFW.glfwWindowHint
 import org.lwjgl.glfw.GLFW.glfwWindowShouldClose
 import org.lwjgl.opengl.GL.createCapabilities
-import org.lwjgl.opengl.GL11.GL_BACK
-import org.lwjgl.opengl.GL11.GL_BLEND
 import org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT
-import org.lwjgl.opengl.GL11.GL_CULL_FACE
 import org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT
-import org.lwjgl.opengl.GL11.GL_DEPTH_TEST
 import org.lwjgl.opengl.GL11.GL_FRONT
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
-import org.lwjgl.opengl.GL11.GL_POLYGON_OFFSET_FILL
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
-import org.lwjgl.opengl.GL11.glBlendFunc
 import org.lwjgl.opengl.GL11.glClear
 import org.lwjgl.opengl.GL11.glClearColor
-import org.lwjgl.opengl.GL11.glCullFace
-import org.lwjgl.opengl.GL11.glDisable
-import org.lwjgl.opengl.GL11.glEnable
-import org.lwjgl.opengl.GL11.glPolygonOffset
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.system.MemoryUtil
@@ -150,6 +141,8 @@ object Game{
 
     private fun init(){
         initWindow()
+        RenderContext.init()
+        RenderContext.enableDepthTest(true)
         shaderProgram = ShaderProgram("shaders/cell.vert", "shaders/cell.frag")
         debugShaderProgram = ShaderProgram("shaders/debug.vert", "shaders/debug.frag")
         hudShaderProgram = ShaderProgram("shaders/hud.vert", "shaders/hud.frag")
@@ -377,7 +370,6 @@ object Game{
         glfwShowWindow(window)
 
         createCapabilities()
-        glEnable(GL_DEPTH_TEST)
     }
 
     private fun renderScene(){
@@ -405,63 +397,64 @@ object Game{
     }
 
     private fun renderDebugVisuals(){
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        RenderContext.withState(
+            blend = true
+        ) {
+            RenderContext.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        debugShaderProgram.bind()
+            debugShaderProgram.bind()
 
-        var viewMatrix = Matrix4f()
-        viewMatrix = if(gameStates[GameState.PLAY] == true) playerCamera.getViewMatrix()
-        else editCamera.getViewMatrix()
+            val viewMatrix = if (gameStates[GameState.PLAY] == true) playerCamera.getViewMatrix()
+            else editCamera.getViewMatrix()
 
-        debugShaderProgram.setUniform("projection", projectionMatrix)
-        debugShaderProgram.setUniform("view", viewMatrix)
-        debugShaderProgram.setUniform("alpha", 0.3f)
-        for(debugObject in gameObjects){
-            debugObject.physicsBody?.let{ body ->
-                val hitbox = body.boundingBox
+            debugShaderProgram.setUniform("projection", projectionMatrix)
+            debugShaderProgram.setUniform("view", viewMatrix)
+            debugShaderProgram.setUniform("alpha", 0.3f)
+            for (debugObject in gameObjects) {
+                debugObject.physicsBody?.let { body ->
+                    val hitbox = body.boundingBox
 
-                val debugModelMatrix = Matrix4f()
-                    .translate(hitbox.transform.position)
-                    .rotate(hitbox.transform.orientation)
-                    .scale(hitbox.size)
-                debugShaderProgram.setUniform("debugColor", Vector3f(1f, 1f, 0f))
-                debugShaderProgram.setUniform("model", debugModelMatrix)
-                cubeMesh.draw()
+                    val debugModelMatrix = Matrix4f()
+                        .translate(hitbox.transform.position)
+                        .rotate(hitbox.transform.orientation)
+                        .scale(hitbox.size)
+                    debugShaderProgram.setUniform("debugColor", Vector3f(1f, 1f, 0f))
+                    debugShaderProgram.setUniform("model", debugModelMatrix)
+                    cubeMesh.draw()
+                }
             }
-        }
 
-        debugShaderProgram.setUniform("projection", projectionMatrix)
-        debugShaderProgram.setUniform("view", viewMatrix)
+            debugShaderProgram.setUniform("projection", projectionMatrix)
+            debugShaderProgram.setUniform("view", viewMatrix)
 
-        val rayStartSize = Vector3f(0.1f)
-        val rayHitSize = Vector3f(1f)
-        val rayMissLength = 0.5f
+            val rayStartSize = Vector3f(0.1f)
+            val rayHitSize = Vector3f(1f)
+            val rayMissLength = 0.5f
 
-        for (debugData in physicsEngine.debugRaycastResults){
-            val ray = debugData.ray
-            val hit = debugData.hit
-            val color = debugData.color
-            val startMatrix = Matrix4f().translate(ray.origin).scale(rayStartSize)
-            debugShaderProgram.setUniform("model", startMatrix)
-            cubeMesh.draw()
-
-            if (hit != null){
-                val hitMatrix = Matrix4f().translate(hit.point).scale(rayHitSize)
-                debugShaderProgram.setUniform("model", hitMatrix)
-                debugShaderProgram.setUniform("debugColor", color)
+            for (debugData in physicsEngine.debugRaycastResults) {
+                val ray = debugData.ray
+                val hit = debugData.hit
+                val color = debugData.color
+                val startMatrix = Matrix4f().translate(ray.origin).scale(rayStartSize)
+                debugShaderProgram.setUniform("model", startMatrix)
                 cubeMesh.draw()
-            } else {
-                val endPoint = Vector3f(ray.origin).add(Vector3f(ray.direction).mul(rayMissLength))
-                val missMatrix = Matrix4f().translate(endPoint).scale(rayStartSize)
-                debugShaderProgram.setUniform("model", missMatrix)
-                debugShaderProgram.setUniform("debugColor", color)
-                cubeMesh.draw()
+
+                if (hit != null) {
+                    val hitMatrix = Matrix4f().translate(hit.point).scale(rayHitSize)
+                    debugShaderProgram.setUniform("model", hitMatrix)
+                    debugShaderProgram.setUniform("debugColor", color)
+                    cubeMesh.draw()
+                } else {
+                    val endPoint = Vector3f(ray.origin).add(Vector3f(ray.direction).mul(rayMissLength))
+                    val missMatrix = Matrix4f().translate(endPoint).scale(rayStartSize)
+                    debugShaderProgram.setUniform("model", missMatrix)
+                    debugShaderProgram.setUniform("debugColor", color)
+                    cubeMesh.draw()
+                }
             }
-        }
 
-        debugShaderProgram.unbind()
-        glDisable(GL_BLEND)
+            debugShaderProgram.unbind()
+        }
     }
 
     private fun renderHUD(){
@@ -498,22 +491,22 @@ object Game{
         gameObject.model.mesh.draw()
 
         if(gameObject.id == "Player") {
-            glEnable(GL_CULL_FACE)
-            glCullFace(GL_FRONT)
-            glEnable(GL_POLYGON_OFFSET_FILL)
-            glPolygonOffset(1.0f, 1.0f)
+            RenderContext.withState(
+                cullFace = true,
+                cullMode = GL_FRONT,
+                polygonOffset = true,
+            ) {
+                RenderContext.setPolygonOffset(1.0f, 1.0f)
 
-            outlineShaderProgram.bind()
-            outlineShaderProgram.setUniform("model", gameObject.globalMatrix)
-            outlineShaderProgram.setUniform("outlineWidth", 0.05f)
-            outlineShaderProgram.setUniform("outlineColor", Vector3f(0.0f, 0.0f, 0.0f))
-            gameObject.model.mesh.draw()
+                outlineShaderProgram.bind()
 
-            outlineShaderProgram.unbind()
-            glDisable(GL_POLYGON_OFFSET_FILL)
-            glDisable(GL_CULL_FACE)
-            glCullFace(GL_BACK)
+                outlineShaderProgram.setUniform("model", gameObject.globalMatrix)
+                outlineShaderProgram.setUniform("outlineWidth", 0.05f)
+                outlineShaderProgram.setUniform("outlineColor", Vector3f(0.0f, 0.0f, 0.0f))
+                gameObject.model.mesh.draw()
 
+                outlineShaderProgram.unbind()
+            }
         }
 
         for(child in gameObject.children){
