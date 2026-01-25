@@ -80,8 +80,6 @@ object Game{
 
     private var window: Long = 0
     private var gameStates = mutableMapOf<GameState, Boolean>()
-    private var framesTilNextModeSwitch = 0
-    private const val MAX_FRAMES_TIL_NEXT_MODE_SWITCH = 60
     private const val INITIAL_WINDOW_WIDTH = 800
     private const val INITIAL_WINDOW_HEIGHT = 600
     private const val WINDOW_TITLE = "Game Engine"
@@ -91,7 +89,6 @@ object Game{
 
     private var currentLevelPath = "levels/level1.amlevel"
 
-    private const val MAX_DELTA_TIME = 0.1f
     private val SPAWN_POINT = Vector3f(0f, 1f, 0f)
 
     private lateinit var shaderProgram: ShaderProgram
@@ -131,6 +128,8 @@ object Game{
     private var lastMouseY = 0.0
     private var firstMouse = true
     private var mouseWasPressed = false
+    private var debugKeyWasPressed = false
+    private var editModeKeyWasPressed = false
 
     @JvmStatic
     fun main(vararg args: String){
@@ -519,23 +518,29 @@ object Game{
     }
 
     private fun handleGlobalInput(){
-
-        if (framesTilNextModeSwitch == 0 && glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
-            if(gameStates[GameState.PLAY] == true){
-                gameStates[GameState.PLAY] = false
-                gameStates[GameState.EDITOR] = true
-            } else{
-                gameStates[GameState.PLAY] = true
-                gameStates[GameState.EDITOR] = false
+        if(glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS){
+            if (!editModeKeyWasPressed){
+                if(gameStates[GameState.PLAY] == true){
+                    gameStates[GameState.PLAY] = false
+                    gameStates[GameState.EDITOR] = true
+                } else{
+                    gameStates[GameState.PLAY] = true
+                    gameStates[GameState.EDITOR] = false
+                }
+                editModeKeyWasPressed = true
             }
-            framesTilNextModeSwitch = MAX_FRAMES_TIL_NEXT_MODE_SWITCH
+        } else{
+            editModeKeyWasPressed = false
         }
 
         if(glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS){
-            gameStates[GameState.DEBUG] = gameStates[GameState.DEBUG] != true
+            if (!debugKeyWasPressed){
+                gameStates[GameState.DEBUG] = gameStates[GameState.DEBUG] != true
+                debugKeyWasPressed = true
+            }
+        } else{
+            debugKeyWasPressed = false
         }
-
-        if (framesTilNextModeSwitch > 0) framesTilNextModeSwitch--
     }
 
     private fun getPlayerInput(): PlayerInput{
